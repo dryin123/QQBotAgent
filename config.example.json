@@ -1,0 +1,20 @@
+{
+  "_说明": "示例配置：全部为占位符，请勿填入真实凭证。真实配置保存在运行时生成的 data/config.json（密钥经 DPAPI 加密），且已被 .gitignore 排除。",
+  "app_id": "YOUR_QQ_BOT_APPID",
+  "app_secret": "YOUR_QQ_BOT_APPSECRET",
+  "provider_type": "deepseek",
+  "api_key": "YOUR_LLM_API_KEY",
+  "base_url": "https://api.deepseek.com/v1",
+  "system_prompt": "",
+  "max_rounds": 5,
+  "temperature": 0.7,
+  "thinking": "off",
+  "model": "deepseek-chat",
+  "compression_enabled": false,
+  "compression_token_limit": 60000,
+  "history_temp_keep_groups": 10,
+  "history_temp_cleanup_enabled": true,
+  "chat_target_group_openid": "",
+  "chat_topic": "",
+  "chat_target_user_openid": ""
+}

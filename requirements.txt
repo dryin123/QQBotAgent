@@ -1,0 +1,13 @@
+# Web 框架与服务
+fastapi>=0.115.0
+uvicorn>=0.30.0
+jinja2>=3.1.0
+
+# 网络（QQ WebSocket 客户端 + HTTP 请求）
+aiohttp>=3.9.0
+
+# 数据校验
+pydantic>=2.7.0
+
+# uvicorn 的 WebSocket 支持（可选但推荐）
+websockets>=12.0

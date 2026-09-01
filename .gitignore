@@ -1,0 +1,42 @@
+# ===== 敏感数据（凭证 / 聊天记录 / 用户 openid）=====
+# 这些目录含真实密钥与聊天内容，绝不能提交
+data/
+aux_data/
+history_temp/
+*.log
+app.pid
+startup.log
+error.log
+daemon.log
+qq_connect.log
+
+# 配置文件（含真实凭证）
+config.json
+config.local.json
+.env
+.env.*
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+
+# ===== 打包产物 =====
+QQBotAgent.exe
+*_internal/
+*.spec
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
