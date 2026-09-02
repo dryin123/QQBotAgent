@@ -72,6 +72,32 @@ for _h in list(logging.getLogger().handlers) + list(logger.handlers):
     except Exception:
         pass
 
+_BOOT_TS = time.time()
+_recent_errors = []
+
+
+class _ErrorCapture(logging.Handler):
+    def emit(self, record):
+        try:
+            _recent_errors.append(f"{time.strftime('%H:%M:%S')} {record.getMessage()[:180]}")
+            if len(_recent_errors) > 5:
+                del _recent_errors[:-5]
+        except Exception:
+            pass
+
+
+logger.addHandler(_ErrorCapture())
+
+_http_shared = None
+
+
+async def _http() -> aiohttp.ClientSession:
+    global _http_shared
+    if _http_shared is None or _http_shared.closed:
+        _http_shared = aiohttp.ClientSession()
+    return _http_shared
+
+
 def _ensure_data_dir() -> str:
     os.makedirs(DATA_DIR, exist_ok=True)
     _lockdown_data_dir()
@@ -747,13 +773,13 @@ class OpenAIProvider(Provider):
         self._register_secret(api_key)
         self.thinking_profile = THINKING_PROFILES["_default"]
     async def get_models(self) -> List[str]:
-        async with aiohttp.ClientSession() as session:
-            headers = {"Authorization": f"Bearer {self.api_key}"}
-            async with session.get(f"{self.base_url}/models", headers=headers) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return [m['id'] for m in data.get('data', [])]
-                return []
+        session = await _http()
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        async with session.get(f"{self.base_url}/models", headers=headers) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                return [m['id'] for m in data.get('data', [])]
+            return []
     async def test_connection(self) -> bool:
 
         try:
@@ -775,32 +801,32 @@ class OpenAIProvider(Provider):
             thinking_extra = profile["off_payload"]
         elif reasoning_effort and reasoning_effort in profile.get("levels", []):
             thinking_extra = profile["on_payload"](reasoning_effort)
-        async with aiohttp.ClientSession() as session:
-            headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        session = await _http()
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
-            payload = {"model": model, "messages": messages, "temperature": temperature}
-            if thinking_extra:
-                payload.update(thinking_extra)
-            async with session.post(f"{self.base_url}/chat/completions", headers=headers, json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
+        payload = {"model": model, "messages": messages, "temperature": temperature}
+        if thinking_extra:
+            payload.update(thinking_extra)
+        async with session.post(f"{self.base_url}/chat/completions", headers=headers, json=payload) as resp:
+            if resp.status == 200:
+                data = await resp.json()
 
-                    if usage_ctx and isinstance(data, dict):
-                        usage = data.get("usage", {}) or {}
-                        _record_token_usage(
-                            user_id=usage_ctx.get("user_id", ""),
-                            provider_type=usage_ctx.get("provider_type", ""),
-                            model=model,
-                            prompt_tokens=usage.get("prompt_tokens", 0),
-                            completion_tokens=usage.get("completion_tokens", 0),
-                            total_tokens=usage.get("total_tokens", 0),
-                            cache_hit=usage.get("prompt_cache_hit_tokens", 0),
-                            cache_miss=usage.get("prompt_cache_miss_tokens", 0),
-                        )
-                    return data['choices'][0]['message']['content']
-                else:
-                    error = await resp.text()
-                    raise Exception(f"OpenAI API error: {resp.status} - {error}")
+                if usage_ctx and isinstance(data, dict):
+                    usage = data.get("usage", {}) or {}
+                    _record_token_usage(
+                        user_id=usage_ctx.get("user_id", ""),
+                        provider_type=usage_ctx.get("provider_type", ""),
+                        model=model,
+                        prompt_tokens=usage.get("prompt_tokens", 0),
+                        completion_tokens=usage.get("completion_tokens", 0),
+                        total_tokens=usage.get("total_tokens", 0),
+                        cache_hit=usage.get("prompt_cache_hit_tokens", 0),
+                        cache_miss=usage.get("prompt_cache_miss_tokens", 0),
+                    )
+                return data['choices'][0]['message']['content']
+            else:
+                error = await resp.text()
+                raise Exception(f"OpenAI API error: {resp.status} - {error}")
 
 class AnthropicProvider(Provider):
     def __init__(self, api_key: str, base_url: str = "https://api.anthropic.com/v1"):
@@ -811,11 +837,11 @@ class AnthropicProvider(Provider):
         return ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"]
     async def test_connection(self) -> bool:
         try:
-            async with aiohttp.ClientSession() as session:
-                headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"}
-                payload = {"model": "claude-3-haiku-20240307", "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}
-                async with session.post(f"{self.base_url}/messages", headers=headers, json=payload) as resp:
-                    return resp.status == 200
+            session = await _http()
+            headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"}
+            payload = {"model": "claude-3-haiku-20240307", "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}
+            async with session.post(f"{self.base_url}/messages", headers=headers, json=payload) as resp:
+                return resp.status == 200
         except:
             return False
     async def chat_completion(self, messages: List[Dict[str, str]], temperature: float,
@@ -832,32 +858,32 @@ class AnthropicProvider(Provider):
                 user_msgs.append({"role": "user", "content": msg['content']})
             elif msg['role'] == 'assistant':
                 user_msgs.append({"role": "assistant", "content": msg['content']})
-        async with aiohttp.ClientSession() as session:
-            headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"}
+        session = await _http()
+        headers = {"x-api-key": self.api_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"}
 
 
-            payload = {"model": model, "system": system_prompt, "messages": user_msgs,
-                       "temperature": temperature, "max_tokens": 32768}
-            async with session.post(f"{self.base_url}/messages", headers=headers, json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
+        payload = {"model": model, "system": system_prompt, "messages": user_msgs,
+                   "temperature": temperature, "max_tokens": 32768}
+        async with session.post(f"{self.base_url}/messages", headers=headers, json=payload) as resp:
+            if resp.status == 200:
+                data = await resp.json()
 
-                    if usage_ctx and isinstance(data, dict):
-                        usage = data.get("usage", {}) or {}
-                        _record_token_usage(
-                            user_id=usage_ctx.get("user_id", ""),
-                            provider_type=usage_ctx.get("provider_type", ""),
-                            model=model,
-                            prompt_tokens=usage.get("input_tokens", 0),
-                            completion_tokens=usage.get("output_tokens", 0),
-                            total_tokens=(usage.get("input_tokens", 0) or 0) + (usage.get("output_tokens", 0) or 0),
-                            cache_hit=usage.get("cache_read_input_tokens", 0),
-                            cache_miss=usage.get("cache_creation_input_tokens", 0),
-                        )
-                    return data['content'][0]['text']
-                else:
-                    error = await resp.text()
-                    raise Exception(f"Anthropic API error: {resp.status} - {error}")
+                if usage_ctx and isinstance(data, dict):
+                    usage = data.get("usage", {}) or {}
+                    _record_token_usage(
+                        user_id=usage_ctx.get("user_id", ""),
+                        provider_type=usage_ctx.get("provider_type", ""),
+                        model=model,
+                        prompt_tokens=usage.get("input_tokens", 0),
+                        completion_tokens=usage.get("output_tokens", 0),
+                        total_tokens=(usage.get("input_tokens", 0) or 0) + (usage.get("output_tokens", 0) or 0),
+                        cache_hit=usage.get("cache_read_input_tokens", 0),
+                        cache_miss=usage.get("cache_creation_input_tokens", 0),
+                    )
+                return data['content'][0]['text']
+            else:
+                error = await resp.text()
+                raise Exception(f"Anthropic API error: {resp.status} - {error}")
 
 
 
@@ -979,17 +1005,6 @@ def _temp_dir_for_group(user_id: str, group_id: int, base_dir: str = None) -> st
     os.makedirs(d, exist_ok=True)
     return d
 
-def _save_temp_compression(user_id: str, group_id: int, round_no: int, summary: str, base_dir: str = None):
-    try:
-        d = _temp_dir_for_group(user_id, group_id, base_dir)
-        fp = os.path.join(d, f"compress_{round_no:03d}.txt")
-        with open(fp, "w", encoding="utf-8") as f:
-            f.write(summary)
-        return fp
-    except Exception as e:
-        logger.warning(f"保存压缩结果失败: {e}")
-        return ""
-
 def _load_all_temp_compressions(user_id: str, group_id: int, base_dir: str = None) -> List[Dict]:
     out = []
     try:
@@ -997,17 +1012,50 @@ def _load_all_temp_compressions(user_id: str, group_id: int, base_dir: str = Non
         if not os.path.isdir(d):
             return out
         for fn in os.listdir(d):
-            if fn.startswith("compress_") and fn.endswith(".txt"):
-                fp = os.path.join(d, fn)
+            fp = os.path.join(d, fn)
+            if fn == "summary.txt":
+                try:
+                    with open(fp, "r", encoding="utf-8") as f:
+                        out.append({"file": fn, "round": "999999", "summary": f.read()})
+                except Exception:
+                    continue
+            elif fn.startswith("compress_") and fn.endswith(".txt"):
                 try:
                     with open(fp, "r", encoding="utf-8") as f:
                         out.append({"file": fn, "round": fn.replace("compress_", "").replace(".txt", ""), "summary": f.read()})
                 except Exception:
                     continue
-        out.sort(key=lambda x: x.get("round", "0"))
+        out.sort(key=lambda x: int(x.get("round", "0")))
     except Exception as e:
         logger.warning(f"读取压缩记录失败: {e}")
     return out
+
+
+def _save_summary(user_id: str, group_id: int, summary: str, base_dir: str = None) -> str:
+    try:
+        d = _temp_dir_for_group(user_id, group_id, base_dir)
+        fp = os.path.join(d, "summary.txt")
+        with open(fp, "w", encoding="utf-8") as f:
+            f.write(summary)
+        return fp
+    except Exception as e:
+        logger.warning(f"保存合并摘要失败: {e}")
+        return ""
+
+
+def _cleanup_temp_compressions(user_id: str, group_id: int, base_dir: str = None) -> None:
+    try:
+        d = _temp_dir_for_group(user_id, group_id, base_dir)
+        if not os.path.isdir(d):
+            return
+        for fn in os.listdir(d):
+            if fn.startswith("compress_") and fn.endswith(".txt"):
+                try:
+                    os.remove(os.path.join(d, fn))
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.warning(f"清理旧压缩文件失败: {e}")
 
 def _delete_temp_group(user_id: str, group_id: int, base_dir: str = None):
     try:
@@ -1088,8 +1136,30 @@ class SessionManager:
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(self.sessions, f, ensure_ascii=False, indent=2)
             os.replace(tmp, self.store_file)
+            self._backup_once_per_hour()
         except Exception as e:
             logger.warning(f"保存对话记录失败: {e}")
+
+    def _backup_once_per_hour(self):
+        now = time.time()
+        if getattr(self, "_last_backup", 0) and now - self._last_backup < 3600:
+            return
+        self._last_backup = now
+        try:
+            import shutil
+            bdir = os.path.join(DATA_DIR, "backups")
+            os.makedirs(bdir, exist_ok=True)
+            ts = time.strftime("%Y%m%d_%H%M%S")
+            shutil.copy2(self.store_file, os.path.join(bdir, f"sessions_{ts}.json"))
+            items = sorted(os.listdir(bdir))
+            for fn in items[:-10]:
+                try:
+                    os.remove(os.path.join(bdir, fn))
+                except Exception:
+                    pass
+            logger.info(f"会话备份完成: backups/sessions_{ts}.json")
+        except Exception as e:
+            logger.warning(f"会话备份失败(可忽略): {e}")
 
     def _session_count(self) -> int:
         return len(self.sessions)
@@ -1271,7 +1341,10 @@ class SessionManager:
 
         comps = _load_all_temp_compressions(user_id, group_id, self.history_temp_dir)
         for c in comps:
-            messages.append({"role": "system", "content": f"[历史摘要(第{c.get('round','?')}次压缩)]\n{c.get('summary','')}"})
+            _r = c.get('round', '?')
+            _lab = "滚动合并摘要" if str(_r) == "999999" else f"历史摘要(第{_r}次压缩)"
+            _sum = c.get('summary', '')
+            messages.append({"role": "system", "content": f"[{_lab}]\n{_sum}"})
 
         messages.extend(cur.get("history", []))
         return messages
@@ -1295,7 +1368,10 @@ class SessionManager:
 
             comps = _load_all_temp_compressions(user_id, group_id, self.history_temp_dir)
             for c in comps:
-                messages.append({"role": "system", "content": f"[历史摘要(第{c.get('round','?')}次压缩)]\n{c.get('summary','')}"})
+                _r = c.get('round', '?')
+                _lab = "滚动合并摘要" if str(_r) == "999999" else f"历史摘要(第{_r}次压缩)"
+                _sum = c.get('summary', '')
+                messages.append({"role": "system", "content": f"[{_lab}]\n{_sum}"})
 
             messages.extend(cur.get("history", []))
             messages.append({"role": "user", "content": user_message})
@@ -1308,6 +1384,8 @@ class SessionManager:
             session = self._ensure_user(user_id)
             cur = self._current_group(session)
             group_id = session["current_group"] + 1
+            if not cur.get("history"):
+                return False
             comps = _load_all_temp_compressions(user_id, group_id, self.history_temp_dir)
             total_tokens = 0
             for c in comps:
@@ -1328,31 +1406,45 @@ class SessionManager:
                 cur = self._current_group(session)
                 group_id = session["current_group"] + 1
                 round_no = cur.get("rounds", 0) + 1
-                summarize_input = self.get_current_group_messages(user_id)
-                hist_tokens = _estimate_messages_tokens(summarize_input)
-                summary = await self._generate_summary(provider, summarize_input, usage_ctx)
-                if summary:
-                    fp = _save_temp_compression(user_id, group_id, round_no, summary, self.history_temp_dir)
-                    sum_tokens = _estimate_tokens(summary)
-                    cur["history"] = []
-                    cur["rounds"] = 0
-                    cur["compressed"].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "round": round_no, "file": fp})
-                    self._save()
-                    saved = hist_tokens - sum_tokens
-                    logger.info(f"用户 {user_id} 组{group_id} 压缩完成: 历史 {hist_tokens} token -> 摘要 {sum_tokens} token"
-                                f"(省 {max(0, saved)} token / {100 * max(0, saved) // max(1, hist_tokens)}%), 结果存 {fp}")
+                hist = cur.get("history", [])
+                if not hist:
+                    return
+                comps = _load_all_temp_compressions(user_id, group_id, self.history_temp_dir)
+                old_sums = "\n".join(c.get("summary", "") for c in comps)
+                hist_tokens = _estimate_messages_tokens(hist)
+                summary = await self._generate_summary(provider, hist, usage_ctx, old_sums)
+                if not summary:
+                    return
+                keep_n = 2
+                cur["history"] = hist[-keep_n * 2:]
+                cur["rounds"] = keep_n
+                if old_sums:
+                    _cleanup_temp_compressions(user_id, group_id, self.history_temp_dir)
+                fp = _save_summary(user_id, group_id, summary, self.history_temp_dir)
+                cur["compressed"].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "round": round_no, "file": fp})
+                self._save()
+                sum_tokens = _estimate_tokens(summary)
+                saved = hist_tokens - sum_tokens
+                logger.info(f"用户 {user_id} 组{group_id} 压缩完成(滚动合并第{round_no}次): "
+                            f"本轮 {hist_tokens} token -> 摘要 {sum_tokens} token"
+                            f"(省 {max(0, saved)} token / {100 * max(0, saved) // max(1, hist_tokens)}%), 保留近 {keep_n} 轮原文")
         except Exception as e:
             logger.error(f"后台压缩异常: {e}")
         finally:
             self._compressing = False
 
-    async def _generate_summary(self, provider, summarize_input: List[Dict[str, str]], usage_ctx: dict) -> str:
+    async def _generate_summary(self, provider, summarize_input: List[Dict[str, str]], usage_ctx: dict,
+                                old_sums: str = "") -> str:
         try:
 
             prompt_content = "\n".join(f"[{m.get('role','')}]\n{m.get('content','')}" for m in summarize_input)
+            if old_sums:
+                prompt_content = "【既有历史摘要(需并入,勿丢失要点)】\n" + old_sums + "\n\n【本轮新增对话】\n" + prompt_content
             sys_prompt = (
-                "你是上下文压缩助手。把下面的对话压缩成简洁的中文摘要，保留关键信息："
-                "用户偏好、进行中的任务、重要决定、待办事项。不要回答对话中的问题，只输出摘要。"
+                "你是上下文压缩助手。把下面的内容压缩成简洁的中文摘要，保留关键信息："
+                "用户偏好、进行中的任务、重要决定、待办事项、出现过的人名与数字。"
+                "若内容含既有摘要，请把新旧信息合并为一份连贯摘要，不要遗漏既有摘要中的要点。"
+                "不要回答对话中的问题，只输出摘要。"
                 "尽量控制在约 " + str(max(500, self.compression_token_limit // 20)) + " token 以内。"
             )
             msgs = [
@@ -1407,6 +1499,7 @@ class QQBot:
         self.access_token = None
         self.ws_url = None
         self.ws = None
+        self._ws_session = None
         self.running = False
         self.temperature = 0.7
         self.model = "gpt-3.5-turbo"
@@ -1422,31 +1515,30 @@ class QQBot:
 
         url = "https://bots.qq.com/app/getAppAccessToken"
         payload = {"appId": self.app_id, "clientSecret": self.app_secret}
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    body = await resp.text()
-                    try:
-                        data = await resp.json()
-                    except Exception:
-                        data = body
-                    if resp.status == 200 and isinstance(data, dict) and data.get("access_token"):
-                        self.access_token = data["access_token"]
+        session = await _http()
+        try:
+            async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                body = await resp.text()
+                try:
+                    data = await resp.json()
+                except Exception:
+                    data = body
+                if resp.status == 200 and isinstance(data, dict) and data.get("access_token"):
+                    self.access_token = data["access_token"]
+                    logger.info("获取access_token成功")
+                    return True
+                else:
+                    if isinstance(data, dict) and data.get("data", {}).get("access_token"):
+                        self.access_token = data["data"]["access_token"]
                         logger.info("获取access_token成功")
                         return True
-                    else:
-
-                        if isinstance(data, dict) and data.get("data", {}).get("access_token"):
-                            self.access_token = data["data"]["access_token"]
-                            logger.info("获取access_token成功")
-                            return True
-                        logger.error(f"获取access_token失败: status={resp.status}")
-                        self._log_connect_error(f"获取access_token失败: status={resp.status} body={body[:500]}")
-                        return False
-            except Exception as e:
-                logger.error(f"获取access_token异常: {e}")
-                self._log_connect_error(f"获取access_token异常: {e}")
-                return False
+                    logger.error(f"获取access_token失败: status={resp.status}")
+                    self._log_connect_error(f"获取access_token失败: status={resp.status} body={body[:500]}")
+                    return False
+        except Exception as e:
+            logger.error(f"获取access_token异常: {e}")
+            self._log_connect_error(f"获取access_token异常: {e}")
+            return False
 
     def _log_connect_error(self, msg: str) -> None:
         try:
@@ -1459,27 +1551,27 @@ class QQBot:
 
         url = "https://api.sgroup.qq.com/gateway"
         headers = {"Authorization": f"QQBot {self.access_token}", "X-Union-Appid": self.app_id}
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    body = await resp.text()
-                    try:
-                        data = await resp.json()
-                    except Exception:
-                        data = body
-                    if resp.status == 200 and isinstance(data, dict) and data.get("url"):
-                        self.ws_url = data["url"]
-                        safe_ws = _re.sub(r"access_token=[^&]+", "access_token=***", self.ws_url)
-                        logger.info(f"获取WebSocket地址成功: {safe_ws}")
-                        return True
-                    else:
-                        logger.error(f"获取WS地址失败: status={resp.status}")
-                        self._log_connect_error(f"获取WS地址失败: status={resp.status} body={body[:500]}")
-                        return False
-            except Exception as e:
-                logger.error(f"获取WS地址异常: {e}")
-                self._log_connect_error(f"获取WS地址异常: {e}")
-                return False
+        session = await _http()
+        try:
+            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                body = await resp.text()
+                try:
+                    data = await resp.json()
+                except Exception:
+                    data = body
+                if resp.status == 200 and isinstance(data, dict) and data.get("url"):
+                    self.ws_url = data["url"]
+                    safe_ws = _re.sub(r"access_token=[^&]+", "access_token=***", self.ws_url)
+                    logger.info(f"获取WebSocket地址成功: {safe_ws}")
+                    return True
+                else:
+                    logger.error(f"获取WS地址失败: status={resp.status}")
+                    self._log_connect_error(f"获取WS地址失败: status={resp.status} body={body[:500]}")
+                    return False
+        except Exception as e:
+            logger.error(f"获取WS地址异常: {e}")
+            self._log_connect_error(f"获取WS地址异常: {e}")
+            return False
 
     async def _handle_message(self, payload: dict):
         try:
@@ -1499,6 +1591,17 @@ class QQBot:
                 target_id = author.get("member_openid") or "unknown"
             group_id = d.get("group_openid", "") if event_type == "GROUP_AT_MESSAGE_CREATE" else ""
             msg_id = d.get("id", "")
+            if len(content) > 4000:
+                content = content[:4000]
+                logger.info(f"消息过长已截断 from {target_id}")
+            _k = (target_id, group_id)
+            _now = time.time()
+            if not hasattr(self, "_last_msg_at"):
+                self._last_msg_at = {}
+            if _now - self._last_msg_at.get(_k, 0) < 1.2:
+                logger.info(f"忽略高频消息 from {target_id} (1.2s 窗口内)")
+                return
+            self._last_msg_at[_k] = _now
             logger.info(f"收到消息 from {target_id} ({event_type}): len={len(content)}")
 
             usage_ctx = {"user_id": target_id, "provider_type": self.config.get("provider_type", "")}
@@ -1541,18 +1644,18 @@ class QQBot:
             if msg_id:
                 payload["msg_id"] = msg_id
             last_err = None
+            _sess = await _http()
             for attempt in range(3):
                 try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.post(url, json=payload, headers=headers,
-                                                timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                            if resp.status == 200:
-                                return
-                            body = await resp.text()
-                            last_err = f"status={resp.status} body={body[:200]}"
-                            if resp.status < 500:
-                                logger.error(f"回复消息失败: {last_err}")
-                                return
+                    async with _sess.post(url, json=payload, headers=headers,
+                                          timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                        if resp.status == 200:
+                            return
+                        body = await resp.text()
+                        last_err = f"status={resp.status} body={body[:200]}"
+                        if resp.status < 500:
+                            logger.error(f"回复消息失败: {last_err}")
+                            return
                 except Exception as e:
                     last_err = str(e)
                 logger.warning(f"回复消息重试(第{attempt+1}次): {last_err}")
@@ -1569,12 +1672,12 @@ class QQBot:
         url = f"https://api.sgroup.qq.com/v2/groups/{group_openid}/messages"
         headers = {"Authorization": f"QQBot {self.access_token}", "Content-Type": "application/json"}
         payload = {"content": content, "msg_type": 0}
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                if resp.status != 200:
-                    body = await resp.text()
-                    raise RuntimeError(f"主动发消息失败: status={resp.status} body={body[:300]}")
-                return True
+        session = await _http()
+        async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+            if resp.status != 200:
+                body = await resp.text()
+                raise RuntimeError(f"主动发消息失败: status={resp.status} body={body[:300]}")
+            return True
 
     async def _listen(self):
         try:
@@ -1644,6 +1747,7 @@ class QQBot:
                 if not await self._get_ws_url():
                     raise Exception("获取WebSocket地址失败")
                 session = aiohttp.ClientSession()
+                self._ws_session = session
 
                 ws_headers = {
                     "Authorization": f"QQBot {self.access_token}",
@@ -1692,6 +1796,12 @@ class QQBot:
             except Exception as e:
                 logger.warning(f"操作失败(可忽略): {e}")
             self.ws = None
+        if self._ws_session and not self._ws_session.closed:
+            try:
+                await self._ws_session.close()
+            except Exception as e:
+                logger.warning(f"操作失败(可忽略): {e}")
+            self._ws_session = None
 
     async def set_params(self, temperature: float, model: str, thinking: str = "off"):
         self.temperature = temperature
@@ -1836,6 +1946,16 @@ HTML_TEMPLATE = """
                 <td style="padding:4px 8px;" id="st-model-link">—</td>
                 <td style="padding:4px 8px;color:#7f8c8d;">当前模型</td>
                 <td style="padding:4px 8px;" id="st-model">—</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px;color:#7f8c8d;">运行时长</td>
+                <td style="padding:4px 8px;" id="st-uptime">—</td>
+                <td style="padding:4px 8px;color:#7f8c8d;">会话数</td>
+                <td style="padding:4px 8px;" id="st-session">—</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px;color:#7f8c8d;">最近错误</td>
+                <td colspan="3" style="padding:4px 8px;" id="st-errors">无</td>
             </tr>
         </table>
         <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -2629,6 +2749,19 @@ HTML_TEMPLATE = """
             const hasModelCfg = data.provider_type && data.model;
             if (stModelLink) stModelLink.innerHTML = hasModelCfg ? ok + ` ${data.provider_type || ''}` : bad + ' 未配置';
             if (stModel) stModel.innerHTML = data.model ? `<span class="st-ok">${data.model}</span>` : '<span class="st-bad">未选择</span>';
+            const stUptime = document.getElementById('st-uptime');
+            const stSess = document.getElementById('st-session');
+            const stErr = document.getElementById('st-errors');
+            if (stUptime) {
+                const up = data.uptime || 0;
+                const h = Math.floor(up / 3600), m = Math.floor(up % 3600 / 60);
+                stUptime.textContent = (h ? h + '时' : '') + m + '分';
+            }
+            if (stSess) stSess.textContent = String(data.session_count || 0);
+            if (stErr) {
+                const es = data.recent_errors || [];
+                stErr.innerHTML = es.length ? es.map(function(x){ return '<div style="color:#c0392b;font-size:12px">' + x + '</div>'; }).join('') : '无';
+            }
         } catch (e) {  }
     }
 
@@ -3245,6 +3378,9 @@ async def get_status(request: Request):
         "base_url": config.get("base_url", ""),
         "model": current_model,
         "bot_running": qq_connected,
+        "uptime": int(time.time() - _BOOT_TS),
+        "recent_errors": list(_recent_errors),
+        "session_count": len(session_mgr.sessions),
     }
 
 
