@@ -52,6 +52,26 @@ try:
 except Exception:
     pass
 
+import re as _logre
+class _RedactFilter(logging.Filter):
+    _pat = _logre.compile(
+        r"(sk-[A-Za-z0-9]{8,}|Bearer\s+[A-Za-z0-9._\-]{16,}|"
+        r"(?:api[_-]?key|app_secret|app_id)[=:\s]+[A-Za-z0-9@$!%*#?&._\-]{6,})",
+        _logre.I)
+    def filter(self, record):
+        try:
+            if not record.args:
+                record.msg = self._pat.sub("***", record.msg)
+        except Exception:
+            pass
+        return True
+_redact_f = _RedactFilter()
+for _h in list(logging.getLogger().handlers) + list(logger.handlers):
+    try:
+        _h.addFilter(_redact_f)
+    except Exception:
+        pass
+
 def _ensure_data_dir() -> str:
     os.makedirs(DATA_DIR, exist_ok=True)
     _lockdown_data_dir()
@@ -879,6 +899,12 @@ THINKING_PROFILES = {
         "on_payload": lambda eff: {"reasoning_effort": eff},
     },
 
+    "ollama": {
+        "levels": ["low", "medium", "high"],
+        "off_payload": {},
+        "on_payload": lambda eff: {},
+    },
+
     "_default": {
         "levels": ["low", "medium", "high"],
         "off_payload": {"reasoning_effort": "none"},
@@ -1171,7 +1197,7 @@ class SessionManager:
     def start_cleanup(self):
         async def cleanup_loop():
             while True:
-                await asyncio.sleep(300)
+                await asyncio.sleep(60)
                 await self._cleanup_expired()
         self._cleanup_task = asyncio.create_task(cleanup_loop())
 
@@ -1303,14 +1329,18 @@ class SessionManager:
                 group_id = session["current_group"] + 1
                 round_no = cur.get("rounds", 0) + 1
                 summarize_input = self.get_current_group_messages(user_id)
+                hist_tokens = _estimate_messages_tokens(summarize_input)
                 summary = await self._generate_summary(provider, summarize_input, usage_ctx)
                 if summary:
                     fp = _save_temp_compression(user_id, group_id, round_no, summary, self.history_temp_dir)
+                    sum_tokens = _estimate_tokens(summary)
                     cur["history"] = []
                     cur["rounds"] = 0
                     cur["compressed"].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "round": round_no, "file": fp})
                     self._save()
-                    logger.info(f"用户 {user_id} 组{group_id} 压缩完成，结果存 {fp}")
+                    saved = hist_tokens - sum_tokens
+                    logger.info(f"用户 {user_id} 组{group_id} 压缩完成: 历史 {hist_tokens} token -> 摘要 {sum_tokens} token"
+                                f"(省 {max(0, saved)} token / {100 * max(0, saved) // max(1, hist_tokens)}%), 结果存 {fp}")
         except Exception as e:
             logger.error(f"后台压缩异常: {e}")
         finally:
@@ -1728,6 +1758,7 @@ HTML_TEMPLATE = """
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>QQ聊天机器人Agent配置</title>
     <style>
         body { font-family: Arial; margin: 20px; background: #f5f7fa; }
@@ -1778,6 +1809,14 @@ HTML_TEMPLATE = """
         .tok-row .tok-nums { color: #c0392b; font-weight: bold; margin-left: auto; }
         .model-list { background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; max-height: 150px; overflow-y: auto; }
         .hidden { display: none; }
+        @media (max-width: 700px) {
+            body { margin: 8px; }
+            .container { padding: 14px; }
+            h1 { font-size: 1.25rem; }
+            .form-row, .row { flex-direction: column; }
+            .nav-tabs { flex-wrap: wrap; }
+            .tok-row .tok-uid { max-width: 90px; }
+        }
     </style>
 </head>
 <body>
@@ -2265,6 +2304,7 @@ HTML_TEMPLATE = """
         if (missingAppId) { alert('请填写 AppID'); return; }
         if (missingAppSecret) { alert('请填写 AppSecret'); return; }
         if (!payload.api_key && !real.api_key) { alert('请填写 API Key'); return; }
+        if (!payload.model) { alert('请先选择模型(点「获取模型列表」后在下拉中选择)'); return; }
         const resp = await fetch('/api/start', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -2902,6 +2942,7 @@ HTML_TEMPLATE = """
         if (missingAppId) { alert('请填写辅助程序 AppID（注意：AppID 不随「读取主程序配置」克隆，须单独填）'); return; }
         if (missingAppSecret) { alert('请填写辅助程序 AppSecret'); return; }
         if (!payload.api_key && !real.api_key) { alert('请填写辅助程序 API Key'); return; }
+        if (!payload.model) { alert('请先选择辅助程序模型(点「获取模型列表」后选择)'); return; }
         const resp = await fetch('/api/aux/start', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -3205,6 +3246,12 @@ async def get_status(request: Request):
         "model": current_model,
         "bot_running": qq_connected,
     }
+
+
+@app.get("/health")
+async def health(request: Request):
+    return {"status": "ok", "service": True, "qq_connected": bool(bot and bot.running)}
+
 
 @app.post("/api/stop")
 async def stop_bot(request: Request):

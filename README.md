@@ -98,14 +98,26 @@ QQBotAgent/
 ├── .gitignore
 ├── LICENSE
 ├── config.example.json    # 配置示例（占位符）
+├── Dockerfile             # 容器化部署（可选）
+├── .github/workflows/ci.yml  # CI：编译 + import + 单测
+├── docs/compression.md    # 上下文压缩算法说明
+├── tests/test_core.py     # 核心纯函数单测（python -m unittest discover -s tests）
 └── data/                  # 运行时生成，已被 .gitignore 排除
     ├── config.json        #   配置（密钥本地加密保存）
     ├── sessions.json      #   历史聊天记录
     ├── users.json         #   群成员库
-    └── token_usage.json   #   Token 消耗统计
+    ├── token_usage.json   #   Token 消耗统计
+    └── app.log            #   运行日志（自动轮转）
 ```
 
 > `data/`、`aux_data/`、`history_temp/` 含真实凭证与聊天记录，已被 `.gitignore` 排除，请勿提交。
+
+---
+
+## 升级注意 · Upgrade Notes
+
+- **v0.2（2026-09-02）**：上下文压缩改为后台执行（不再阻塞回复）；Token 估算改为中英混合加权（阈值判断更贴近真实用量，压缩触发点可能比旧版更早/更晚，属预期）；`--stop` 的端口清理现在只终止本程序进程，不再误杀其他占用 8000 的程序；Web 状态栏每 5 秒自动刷新；`/health` 健康检查端点。日志现在写入 `data/app.log`（自动轮转）。压缩算法细节见 [docs/compression.md](docs/compression.md)。
+- 配置与数据格式不变，旧 `config.json` / `sessions.json` / `token_usage.json` 可直接沿用，无需迁移。
 
 ---
 

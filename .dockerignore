@@ -1,0 +1,13 @@
+.git
+.gitignore
+data
+aux_data
+history_temp
+__pycache__
+*.pyc
+*.log
+tests
+docs
+Dockerfile
+README.md
+LICENSE
