@@ -77,6 +77,9 @@ _recent_errors = []
 
 
 class _ErrorCapture(logging.Handler):
+    def __init__(self):
+        logging.Handler.__init__(self, level=logging.ERROR)
+
     def emit(self, record):
         try:
             _recent_errors.append(f"{time.strftime('%H:%M:%S')} {record.getMessage()[:180]}")
@@ -138,6 +141,8 @@ MODEL_CONFIGS_FILE = os.path.join(DATA_DIR, "model_configs.json")
 
 
 def _load_model_configs() -> List[Dict]:
+    if not os.path.exists(MODEL_CONFIGS_FILE):
+        return []
     try:
         with open(MODEL_CONFIGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -1415,7 +1420,7 @@ class SessionManager:
                 summary = await self._generate_summary(provider, hist, usage_ctx, old_sums)
                 if not summary:
                     return
-                keep_n = 2
+                keep_n = min(2, max(1, (self.max_rounds or 5) - 1))
                 cur["history"] = hist[-keep_n * 2:]
                 cur["rounds"] = keep_n
                 if old_sums:
@@ -1821,6 +1826,13 @@ async def _lifespan(app: FastAPI):
     yield
     session_mgr.stop_cleanup()
     aux_session_mgr.stop_cleanup()
+    global _http_shared
+    if _http_shared and not _http_shared.closed:
+        try:
+            await _http_shared.close()
+        except Exception as e:
+            logger.warning(f"关闭HTTP连接失败(可忽略): {e}")
+        _http_shared = None
 
 app = FastAPI(title="QQ聊天机器人Agent", lifespan=_lifespan)
 config = load_config()
