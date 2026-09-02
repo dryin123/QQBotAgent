@@ -43,6 +43,15 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 AUX_DATA_DIR = os.path.join(BASE_DIR, "aux_data")
 AUX_HISTORY_TEMP_DIR = os.path.join(AUX_DATA_DIR, "history_temp")
 
+try:
+    from logging.handlers import RotatingFileHandler
+    _rfh = RotatingFileHandler(os.path.join(DATA_DIR, "app.log"),
+                               maxBytes=2_000_000, backupCount=3, encoding="utf-8", delay=True)
+    _rfh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(_rfh)
+except Exception:
+    pass
+
 def _ensure_data_dir() -> str:
     os.makedirs(DATA_DIR, exist_ok=True)
     _lockdown_data_dir()
@@ -152,37 +161,41 @@ def _delete_model_config(name: str) -> bool:
         return False
 
 
+_TOKEN_USAGE_LOCK = threading.Lock()
+
+
 def _record_token_usage(user_id: str, provider_type: str, model: str,
                         prompt_tokens: int, completion_tokens: int, total_tokens: int,
                         cache_hit: int = 0, cache_miss: int = 0) -> None:
     try:
-        entry = {
-            "ts": time.time(),
-            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "user_id": user_id,
-            "provider": provider_type,
-            "model": model,
-            "prompt_tokens": int(prompt_tokens or 0),
-            "completion_tokens": int(completion_tokens or 0),
-            "total_tokens": int(total_tokens or 0),
-            "cache_hit_tokens": int(cache_hit or 0),
-            "cache_miss_tokens": int(cache_miss or 0),
-        }
-        try:
-            with open(TOKEN_USAGE_FILE, "r", encoding="utf-8") as f:
-                recs = json.load(f)
-                if not isinstance(recs, list):
-                    recs = []
-        except Exception:
-            recs = []
-        recs.append(entry)
+        with _TOKEN_USAGE_LOCK:
+            entry = {
+                "ts": time.time(),
+                "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "user_id": user_id,
+                "provider": provider_type,
+                "model": model,
+                "prompt_tokens": int(prompt_tokens or 0),
+                "completion_tokens": int(completion_tokens or 0),
+                "total_tokens": int(total_tokens or 0),
+                "cache_hit_tokens": int(cache_hit or 0),
+                "cache_miss_tokens": int(cache_miss or 0),
+            }
+            try:
+                with open(TOKEN_USAGE_FILE, "r", encoding="utf-8") as f:
+                    recs = json.load(f)
+                    if not isinstance(recs, list):
+                        recs = []
+            except Exception:
+                recs = []
+            recs.append(entry)
 
-        if len(recs) > 5000:
-            recs = recs[-5000:]
-        tmp = TOKEN_USAGE_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(recs, f, ensure_ascii=False, indent=1)
-        os.replace(tmp, TOKEN_USAGE_FILE)
+            if len(recs) > 5000:
+                recs = recs[-5000:]
+            tmp = TOKEN_USAGE_FILE + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(recs, f, ensure_ascii=False, indent=1)
+            os.replace(tmp, TOKEN_USAGE_FILE)
     except Exception as e:
         logger.warning(f"记录token消耗失败: {e}")
 
@@ -343,8 +356,10 @@ def save_config(cfg):
         if val:
             enc = _encode(val)
             to_save[key] = enc if enc else old.get(key, "")
-    with open(CONFIG_FILE, 'w') as f:
+    tmp = CONFIG_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(to_save, f, indent=2)
+    os.replace(tmp, CONFIG_FILE)
 
 
 
@@ -520,8 +535,22 @@ def _free_port_8000(exclude_pid: Optional[int] = None) -> None:
                         pids.add(int(parts[-1]))
                     except ValueError:
                         pass
+        if not pids:
+            return
         for pid in pids:
             if exclude_pid is not None and pid == exclude_pid:
+                continue
+            cmdline = ""
+            try:
+                ps = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command",
+                     f"(Get-CimInstance Win32_Process -Filter 'ProcessId={pid}').CommandLine"],
+                    capture_output=True, text=True, timeout=8)
+                cmdline = ps.stdout or ""
+            except Exception:
+                pass
+            if "app.py" not in cmdline:
+                logger.info(f"8000 端口被非本程序占用 PID={pid}，跳过(不误杀)")
                 continue
             _terminate_pid(pid)
     except Exception as e:
@@ -560,7 +589,13 @@ def start_daemon() -> None:
     creationflags = 0
     if sys.platform == "win32":
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
-    logf = open(os.path.join(DATA_DIR, "daemon.log"), "a", encoding="utf-8")
+    _daemon_log_path = os.path.join(DATA_DIR, "daemon.log")
+    if os.path.exists(_daemon_log_path) and os.path.getsize(_daemon_log_path) > 5_000_000:
+        try:
+            os.replace(_daemon_log_path, _daemon_log_path + ".old")
+        except Exception:
+            pass
+    logf = open(_daemon_log_path, "a", encoding="utf-8")
     subprocess.Popen(
         target,
         cwd=BASE_DIR,
@@ -898,7 +933,9 @@ def _ensure_history_temp_dir() -> str:
 def _estimate_tokens(content: str) -> int:
     if not content:
         return 0
-    return max(1, len(content) // 4)
+    ascii_n = sum(1 for c in content if ord(c) < 128)
+    cjk_n = len(content) - ascii_n
+    return max(1, int(ascii_n / 4 + cjk_n * 0.75) + 2)
 
 def _estimate_messages_tokens(messages: List[Dict[str, str]]) -> int:
     total = 0
@@ -999,6 +1036,7 @@ class SessionManager:
         self._lock = asyncio.Lock()
         self._cleanup_task = None
         self.model = ""
+        self._compressing = False
 
         self.compression_enabled = False
         self.compression_token_limit = 60000
@@ -1238,14 +1276,12 @@ class SessionManager:
             return messages
 
     async def maybe_compress(self, user_id: str, provider, usage_ctx: dict = None) -> bool:
-        if not self.compression_enabled:
+        if not self.compression_enabled or self._compressing:
             return False
         async with self._lock:
             session = self._ensure_user(user_id)
             cur = self._current_group(session)
             group_id = session["current_group"] + 1
-            round_no = cur.get("rounds", 0) + 1
-
             comps = _load_all_temp_compressions(user_id, group_id, self.history_temp_dir)
             total_tokens = 0
             for c in comps:
@@ -1254,21 +1290,31 @@ class SessionManager:
             if total_tokens < self.compression_token_limit:
                 return False
 
+        logger.info(f"用户 {user_id} 组{group_id} token {total_tokens} 超限，后台压缩(第{cur.get('rounds', 0)+1}次)")
+        self._compressing = True
+        asyncio.create_task(self._run_compress(user_id, provider, usage_ctx))
+        return True
 
-            summarize_input = self.get_current_group_messages(user_id)
-            logger.info(f"用户 {user_id} 组{group_id} token {total_tokens} 超限 {self.compression_token_limit}，触发压缩(第{round_no}次)")
-            summary = await self._generate_summary(provider, summarize_input, usage_ctx)
-            if summary:
-                fp = _save_temp_compression(user_id, group_id, round_no, summary, self.history_temp_dir)
-
-                cur["history"] = []
-                cur["rounds"] = 0
-
-                cur["compressed"].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "round": round_no, "file": fp})
-                self._save()
-                logger.info(f"用户 {user_id} 组{group_id} 压缩完成，结果存 {fp}")
-                return True
-            return False
+    async def _run_compress(self, user_id: str, provider, usage_ctx: dict = None):
+        try:
+            async with self._lock:
+                session = self._ensure_user(user_id)
+                cur = self._current_group(session)
+                group_id = session["current_group"] + 1
+                round_no = cur.get("rounds", 0) + 1
+                summarize_input = self.get_current_group_messages(user_id)
+                summary = await self._generate_summary(provider, summarize_input, usage_ctx)
+                if summary:
+                    fp = _save_temp_compression(user_id, group_id, round_no, summary, self.history_temp_dir)
+                    cur["history"] = []
+                    cur["rounds"] = 0
+                    cur["compressed"].append({"time": time.strftime("%Y-%m-%d %H:%M:%S"), "round": round_no, "file": fp})
+                    self._save()
+                    logger.info(f"用户 {user_id} 组{group_id} 压缩完成，结果存 {fp}")
+        except Exception as e:
+            logger.error(f"后台压缩异常: {e}")
+        finally:
+            self._compressing = False
 
     async def _generate_summary(self, provider, summarize_input: List[Dict[str, str]], usage_ctx: dict) -> str:
         try:
@@ -1464,11 +1510,24 @@ class QQBot:
             payload = {"content": reply_content, "msg_type": 0}
             if msg_id:
                 payload["msg_id"] = msg_id
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    if resp.status != 200:
-                        body = await resp.text()
-                        logger.error(f"回复消息失败: status={resp.status}")
+            last_err = None
+            for attempt in range(3):
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(url, json=payload, headers=headers,
+                                                timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                            if resp.status == 200:
+                                return
+                            body = await resp.text()
+                            last_err = f"status={resp.status} body={body[:200]}"
+                            if resp.status < 500:
+                                logger.error(f"回复消息失败: {last_err}")
+                                return
+                except Exception as e:
+                    last_err = str(e)
+                logger.warning(f"回复消息重试(第{attempt+1}次): {last_err}")
+                await asyncio.sleep(1.5 * (2 ** attempt))
+            logger.error(f"回复消息失败(已重试): {last_err}")
         except Exception as e:
             logger.error(f"回复消息失败: {e}")
 
@@ -2930,6 +2989,7 @@ HTML_TEMPLATE = """
         loadSessions();
         loadTokenUsage();
         loadModelConfigs();
+        setInterval(function() { updateStatus(); }, 5000);
     };
 </script>
 </body>
@@ -3081,6 +3141,10 @@ async def start_bot(request: Request, req: BotStartRequest):
     check_referer(request)
     global bot, bot_task, provider_instance, session_mgr, config
     incoming = req.dict()
+    if not req.app_id or not req.app_secret or not req.api_key:
+        raise HTTPException(400, "AppID、AppSecret、API Key 均不能为空")
+    if not req.model:
+        raise HTTPException(400, "model 不能为空，请先点「获取模型列表」选择模型")
 
 
 
@@ -3225,6 +3289,10 @@ async def clone_aux_from_main(request: Request):
 async def start_aux_bot(request: Request, req: BotStartRequest):
     check_referer(request)
     global aux_bot, aux_bot_task, aux_provider_instance, aux_session_mgr, aux_config
+    if not req.app_id or not req.app_secret or not req.api_key:
+        raise HTTPException(400, "AppID、AppSecret、API Key 均不能为空")
+    if not req.model:
+        raise HTTPException(400, "model 不能为空，请先点「获取模型列表」选择模型")
 
     merged = merge_saved(aux_config, req.dict(), ["api_key", "app_secret", "base_url"])
     try:
@@ -3711,6 +3779,9 @@ if __name__ == "__main__":
         print("仅本机访问（127.0.0.1），局域网其他设备不可访问。")
         print("后台运行：python app.py --daemon    退出：python app.py --stop 或网页「退出程序」")
         print("请确保配置文件 config.json 权限设置为 600 以保护密钥。")
+        if not config.get("app_id") or not config.get("app_secret") or not config.get("api_key"):
+            print("提示：尚未配置 AppID / AppSecret / API Key，机器人不会自动连接。")
+            print("请打开网页 http://127.0.0.1:8000 在「基础配置」中填写后点「启动机器人」。")
         print("="*60)
 
 
