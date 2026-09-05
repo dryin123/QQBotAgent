@@ -322,11 +322,17 @@ def _decode(s: str) -> str:
             return _dpapi_unprotect(raw).decode("utf-8")
         except Exception:
             return ""
-    try:
+    return s
 
-        return base64.b64decode(s.encode()).decode()
+
+def _err_summary(status, body) -> str:
+    try:
+        d = json.loads(body) if isinstance(body, str) else None
+        if isinstance(d, dict):
+            return f"status={status} code={d.get('code') or ''} msg={(str(d.get('message') or ''))[:120]}"
     except Exception:
-        return s
+        pass
+    return f"status={status}"
 
 
 def _dpapi_protect(data: bytes) -> bytes:
@@ -1540,7 +1546,7 @@ class QQBot:
                         logger.info("获取access_token成功")
                         return True
                     logger.error(f"获取access_token失败: status={resp.status}")
-                    self._log_connect_error(f"获取access_token失败: status={resp.status} body={body[:500]}")
+                    self._log_connect_error(f"获取access_token失败: {_err_summary(resp.status, body)}")
                     return False
         except Exception as e:
             logger.error(f"获取access_token异常: {e}")
@@ -1573,7 +1579,7 @@ class QQBot:
                     return True
                 else:
                     logger.error(f"获取WS地址失败: status={resp.status}")
-                    self._log_connect_error(f"获取WS地址失败: status={resp.status} body={body[:500]}")
+                    self._log_connect_error(f"获取WS地址失败: {_err_summary(resp.status, body)}")
                     return False
         except Exception as e:
             logger.error(f"获取WS地址异常: {e}")
@@ -1659,7 +1665,7 @@ class QQBot:
                         if resp.status == 200:
                             return
                         body = await resp.text()
-                        last_err = f"status={resp.status} body={body[:200]}"
+                        last_err = _err_summary(resp.status, body)
                         if resp.status < 500:
                             logger.error(f"回复消息失败: {last_err}")
                             return
@@ -1683,7 +1689,7 @@ class QQBot:
         async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
             if resp.status != 200:
                 body = await resp.text()
-                raise RuntimeError(f"主动发消息失败: status={resp.status} body={body[:300]}")
+                raise RuntimeError(f"主动发消息失败: {_err_summary(resp.status, body)}")
             return True
 
     async def _listen(self):
@@ -1746,8 +1752,7 @@ class QQBot:
 
         self.running = True
         retries = 0
-        max_retries = 5
-        while self.running and not self._stop_flag and retries < max_retries:
+        while self.running and not self._stop_flag:
             try:
                 if not await self._get_access_token():
                     raise Exception("获取access_token失败")
@@ -1763,6 +1768,7 @@ class QQBot:
                 self.ws = await session.ws_connect(self.ws_url, headers=ws_headers, timeout=30.0)
                 logger.info("QQ机器人WebSocket已连接")
                 self.running = True
+                retries = 0
                 await self._listen()
                 if self._stop_flag or not self.running:
                     break
@@ -1778,23 +1784,19 @@ class QQBot:
                     except Exception as e:
                         logger.warning(f"操作失败(可忽略): {e}")
                 self._ws_session = None
-                retries = 0
                 logger.info("连接已断开，准备重新连接")
                 await asyncio.sleep(3)
             except Exception as e:
-                logger.error(f"连接失败 (尝试 {retries+1}/{max_retries}): {e}")
+                retries += 1
+                delay = min(2 ** min(retries, 6), 60)
+                logger.error(f"连接失败(第 {retries} 次): {e}，{delay} 秒后重试")
 
                 try:
                     with open(os.path.join(self.data_dir, "qq_connect.log"), "a", encoding="utf-8") as _f:
-                        _f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} 连接失败(尝试 {retries+1}/{max_retries}): {e}\n")
-                except Exception as e:
-                    logger.warning(f"操作失败(可忽略): {e}")
-                retries += 1
-                if retries < max_retries:
-                    await asyncio.sleep(2 ** retries)
-                else:
-                    logger.error("达到最大重试次数，连接失败")
-                    self.running = False
+                        _f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} 连接失败(第 {retries} 次): {e}\n")
+                except Exception as e2:
+                    logger.warning(f"操作失败(可忽略): {e2}")
+                await asyncio.sleep(delay)
 
     def stop(self):
         self._stop_flag = True
