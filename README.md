@@ -15,6 +15,7 @@
 
 | 版本 | 日期 | 说明 |
 |---|---|---|
+| [v3.0.0](https://github.com/dryin123/QQBotAgent/releases/tag/v3.0.0) | 2026-09-05 | 修复启动校验、WebSocket 断线自动重连、密钥存储加固等（详见 Release 说明） |
 | [v2.0.0](https://github.com/dryin123/QQBotAgent/releases/tag/v2.0.0) | 2026-09-02 | 多轮修复与优化版（token 估算、压缩后台化、压缩算法重写、日志脱敏、/health、CI/Docker/单测等） |
 | [v1.0.0](https://github.com/dryin123/QQBotAgent/releases/tag/v1.0.0) | 2026-09-01 | 初版·纯聊天 QQ 机器人 |
 

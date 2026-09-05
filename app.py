@@ -171,7 +171,7 @@ def _save_current_as_model_config(name: str) -> bool:
             "name": name,
             "provider_type": config.get("provider_type", ""),
             "base_url": config.get("base_url", ""),
-            "api_key": config.get("api_key", ""),
+            "api_key": _encode(config.get("api_key", "")),
             "model": config.get("model", ""),
             "saved_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
@@ -193,7 +193,7 @@ def _apply_model_config(name: str) -> bool:
         global config
         for k in ("provider_type", "base_url", "api_key", "model"):
             if k in target and target[k] is not None:
-                config[k] = target[k]
+                config[k] = _decode(str(target[k])) if k == "api_key" else target[k]
         save_config(config)
         return True
     except Exception as e:
@@ -474,8 +474,10 @@ def save_aux_config(cfg):
         if val:
             enc = _encode(val)
             to_save[key] = enc if enc else old.get(key, "")
-    with open(AUX_CONFIG_FILE, 'w') as f:
+    tmp = AUX_CONFIG_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(to_save, f, indent=2)
+    os.replace(tmp, AUX_CONFIG_FILE)
 
 def clone_global_to_aux(aux_cfg: dict, main_cfg: dict) -> dict:
     merged = dict(aux_cfg)
@@ -1762,7 +1764,23 @@ class QQBot:
                 logger.info("QQ机器人WebSocket已连接")
                 self.running = True
                 await self._listen()
-                break
+                if self._stop_flag or not self.running:
+                    break
+                if self.ws and not self.ws.closed:
+                    try:
+                        await self.ws.close()
+                    except Exception as e:
+                        logger.warning(f"操作失败(可忽略): {e}")
+                self.ws = None
+                if self._ws_session and not self._ws_session.closed:
+                    try:
+                        await self._ws_session.close()
+                    except Exception as e:
+                        logger.warning(f"操作失败(可忽略): {e}")
+                self._ws_session = None
+                retries = 0
+                logger.info("连接已断开，准备重新连接")
+                await asyncio.sleep(3)
             except Exception as e:
                 logger.error(f"连接失败 (尝试 {retries+1}/{max_retries}): {e}")
 
@@ -3327,16 +3345,20 @@ async def start_bot(request: Request, req: BotStartRequest):
     check_referer(request)
     global bot, bot_task, provider_instance, session_mgr, config
     incoming = req.dict()
-    if not req.app_id or not req.app_secret or not req.api_key:
+    merged = merge_saved(config, incoming, ["api_key", "app_secret", "base_url"])
+    for k, v in incoming.items():
+        if k not in ("api_key", "app_secret", "base_url"):
+            merged[k] = v
+    app_id = str(merged.get("app_id") or "").strip()
+    app_secret = str(merged.get("app_secret") or "").strip()
+    api_key = str(merged.get("api_key") or "").strip()
+    base_url = (merged.get("base_url") or "").strip() or provider_default_base(merged.get("provider_type") or "deepseek")
+    if not app_id or not app_secret or not api_key:
         raise HTTPException(400, "AppID、AppSecret、API Key 均不能为空")
     if not req.model:
         raise HTTPException(400, "model 不能为空，请先点「获取模型列表」选择模型")
-
-
-
-    merged = merge_saved(config, incoming, ["api_key", "app_secret", "base_url"])
     try:
-        provider = create_provider(req.provider_type, config["api_key"], config["base_url"])
+        provider = create_provider(merged.get("provider_type") or "deepseek", api_key, base_url)
         provider_instance = provider
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -3352,9 +3374,7 @@ async def start_bot(request: Request, req: BotStartRequest):
             bot_task = None
         bot = None
 
-
-
-    bot = QQBot(config["app_id"], config["app_secret"], provider, session_mgr,
+    bot = QQBot(app_id, app_secret, provider, session_mgr,
                 config=config, data_dir=DATA_DIR)
     bot.temperature = req.temperature
     bot.model = req.model
@@ -3484,14 +3504,21 @@ async def clone_aux_from_main(request: Request):
 async def start_aux_bot(request: Request, req: BotStartRequest):
     check_referer(request)
     global aux_bot, aux_bot_task, aux_provider_instance, aux_session_mgr, aux_config
-    if not req.app_id or not req.app_secret or not req.api_key:
+    incoming = req.dict()
+    merged = merge_saved(aux_config, incoming, ["api_key", "app_secret", "base_url"])
+    for k, v in incoming.items():
+        if k not in ("api_key", "app_secret", "base_url"):
+            merged[k] = v
+    app_id = str(merged.get("app_id") or "").strip()
+    app_secret = str(merged.get("app_secret") or "").strip()
+    api_key = str(merged.get("api_key") or "").strip()
+    base_url = (merged.get("base_url") or "").strip() or provider_default_base(merged.get("provider_type") or "deepseek")
+    if not app_id or not app_secret or not api_key:
         raise HTTPException(400, "AppID、AppSecret、API Key 均不能为空")
     if not req.model:
         raise HTTPException(400, "model 不能为空，请先点「获取模型列表」选择模型")
-
-    merged = merge_saved(aux_config, req.dict(), ["api_key", "app_secret", "base_url"])
     try:
-        provider = create_provider(req.provider_type, aux_config["api_key"], aux_config["base_url"])
+        provider = create_provider(merged.get("provider_type") or "deepseek", api_key, base_url)
         aux_provider_instance = provider
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -3505,7 +3532,7 @@ async def start_aux_bot(request: Request, req: BotStartRequest):
                 pass
             aux_bot_task = None
         aux_bot = None
-    aux_bot = QQBot(aux_config["app_id"], aux_config["app_secret"], provider, aux_session_mgr,
+    aux_bot = QQBot(app_id, app_secret, provider, aux_session_mgr,
                     config=aux_config, data_dir=AUX_DATA_DIR)
     aux_bot.temperature = req.temperature
     aux_bot.model = req.model
