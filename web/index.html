@@ -1,0 +1,1558 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QQ聊天机器人Agent配置</title>
+    <style>
+        :root {
+            --bg: #f3f5f9;
+            --surface: #ffffff;
+            --line: #e3e8ef;
+            --text: #1f2733;
+            --text-2: #5c6b80;
+            --text-3: #8a94a6;
+            --primary: #3563e9;
+            --primary-2: #4a7dff;
+            --ok: #1e9e5a;
+            --warn: #b7791f;
+            --bad: #d64545;
+        }
+        body { font-family: system-ui, "Segoe UI", "Noto Sans SC", "Source Han Sans SC", sans-serif; margin: 24px 16px; background: var(--bg); color: var(--text); font-size: 14px; }
+        .container { max-width: 860px; margin: auto; background: var(--surface); padding: 26px 28px 30px; border-radius: 10px; border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 24px -12px rgba(16,24,40,.12); }
+        .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .brand svg { width: 36px; height: 36px; flex: none; }
+        .brand h1 { font-size: 19px; margin: 0; color: var(--text); text-align: left; letter-spacing: .2px; line-height: 1.2; }
+        .brand-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+        .brand-ver { margin-left: auto; font-size: 12px; color: var(--text-3); border: 1px solid var(--line); padding: 2px 9px; border-radius: 999px; background: #fff; }
+        h3 { font-size: 15px; color: var(--text); margin: 24px 0 10px; padding-left: 10px; border-left: 3px solid var(--primary); line-height: 1.3; }
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 5px; color: var(--text); }
+        input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; box-sizing: border-box; font-size: 13px; color: var(--text); background: #fff; transition: border-color .15s, box-shadow .15s; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-2); box-shadow: 0 0 0 3px rgba(74,125,255,.13); }
+        textarea { height: 80px; resize: vertical; }
+        .btn { position: relative; padding: 7px 15px; border: 1px solid rgba(255,255,255,.55); border-bottom-color: rgba(180,192,210,.65); border-radius: 7px; cursor: pointer; margin-right: 8px; font-size: 13px; font-family: inherit; color: var(--text); background: linear-gradient(180deg, rgba(255,255,255,.42), rgba(238,243,250,.32)); backdrop-filter: blur(10px) saturate(1.35); -webkit-backdrop-filter: blur(10px) saturate(1.35); box-shadow: 0 2px 0 rgba(185,196,215,.55), 0 4px 10px -2px rgba(16,24,40,.14), inset 0 1px 0 rgba(255,255,255,.65); transition: box-shadow .12s, transform .12s, filter .12s, border-color .15s, background .15s; }
+        .btn:hover { filter: brightness(1.04); border-color: rgba(255,255,255,.85); box-shadow: 0 2px 0 rgba(180,192,210,.55), 0 6px 14px -2px rgba(16,24,40,.18), inset 0 1px 0 rgba(255,255,255,.65); }
+        .btn:active { transform: translateY(2px); box-shadow: 0 0 0 rgba(185,196,215,.4), inset 0 1px 3px rgba(16,24,40,.15); }
+        .btn-primary { background: linear-gradient(180deg, rgba(91,138,255,.56), rgba(47,90,222,.56)); border-color: rgba(88,130,255,.9); border-bottom-color: rgba(38,72,184,.9); color: #fff; box-shadow: 0 3px 0 rgba(38,72,184,.85), 0 6px 14px -2px rgba(53,99,233,.45), inset 0 1px 0 rgba(255,255,255,.35); text-shadow: 0 1px 0 rgba(0,0,0,.18); }
+        .btn-primary:hover { filter: brightness(1.08); }
+        .btn-primary:active { transform: translateY(3px); box-shadow: 0 0 0 rgba(38,72,184,.85), inset 0 1px 2px rgba(0,0,0,.2); }
+        .btn-success { background: linear-gradient(180deg, rgba(52,189,114,.56), rgba(25,142,81,.56)); border-color: rgba(23,143,81,.9); border-bottom-color: rgba(17,110,60,.9); color: #fff; box-shadow: 0 3px 0 rgba(17,110,60,.85), 0 6px 14px -2px rgba(30,158,90,.45), inset 0 1px 0 rgba(255,255,255,.32); text-shadow: 0 1px 0 rgba(0,0,0,.18); }
+        .btn-success:hover { filter: brightness(1.07); }
+        .btn-success:active { transform: translateY(3px); box-shadow: 0 0 0 rgba(17,110,60,.85), inset 0 1px 2px rgba(0,0,0,.2); }
+        .btn-danger { background: linear-gradient(180deg, rgba(255,122,122,.52), rgba(214,69,69,.55)); border-color: rgba(230,110,110,.85); border-bottom-color: rgba(185,58,58,.9); color: #fff; box-shadow: 0 2px 0 rgba(185,58,58,.8), 0 4px 12px -2px rgba(214,69,69,.3), inset 0 1px 0 rgba(255,255,255,.3); text-shadow: 0 1px 0 rgba(0,0,0,.15); }
+        .btn-danger:hover { filter: brightness(1.07); }
+        .btn-danger:active { transform: translateY(2px); box-shadow: 0 0 0 rgba(185,58,58,.8), inset 0 1px 2px rgba(0,0,0,.2); }
+        .btn-warning { background: linear-gradient(180deg, rgba(255,190,80,.52), rgba(217,139,31,.55)); border-color: rgba(220,155,50,.85); border-bottom-color: rgba(170,115,30,.9); color: #fff; box-shadow: 0 2px 0 rgba(170,115,30,.8), 0 4px 12px -2px rgba(183,121,31,.3), inset 0 1px 0 rgba(255,255,255,.35); text-shadow: 0 1px 0 rgba(0,0,0,.15); }
+        .btn-warning:hover { filter: brightness(1.07); }
+        .btn-warning:active { transform: translateY(2px); box-shadow: 0 0 0 rgba(170,115,30,.8), inset 0 1px 2px rgba(0,0,0,.2); }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .row .form-group { flex: 1; min-width: 200px; }
+        .status { padding: 9px 12px; border-radius: 6px; margin: 4px 0 10px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px rgba(0,0,0,.05); flex: none; }
+        .status.online { background: #e8f6ee; color: #17683d; border: 1px solid #c6e8d4; }
+        .status.offline { background: #fdeeee; color: #8f2f2f; border: 1px solid #f3caca; }
+        .status-panel { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: #fafbfd; }
+        .status-panel table td { border-bottom: 1px solid #eef1f5; }
+        .status-panel table tr:last-child td { border-bottom: none; }
+        .st-ok { color: var(--ok); font-weight: 600; }
+        .st-bad { color: var(--bad); font-weight: 600; }
+        .st-neutral { color: var(--text-3); }
+        .hint { font-size: 12px; color: var(--text-3); line-height: 1.5; }
+        .sess-item { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; overflow: hidden; background: #fff; transition: border-color .15s; }
+        .sess-item:hover { border-color: #cdd7e4; }
+        .sess-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; background: #fafbfd; }
+        .sess-head:hover { background: #f1f4f9; }
+        .sess-head .uid { font-weight: 600; color: var(--text); }
+        .sess-head .meta { font-size: 12px; color: var(--text-3); margin-left: 12px; }
+        .sess-head .arrow { color: #b6c0cf; transition: transform .15s; }
+        .sess-head.open .arrow { transform: rotate(90deg); }
+        .sess-body { display: none; padding: 10px 14px; border-top: 1px solid var(--line); background: #fff; }
+        .sess-body.open { display: block; }
+        .sess-msg { margin-bottom: 8px; }
+        .sess-msg .role { font-size: 11px; font-weight: 600; color: var(--primary); }
+        .sess-msg .role.assistant { color: var(--ok); }
+        .sess-msg .txt { font-size: 13px; color: #35404e; background: #f5f7fa; border: 1px solid #edf0f4; padding: 6px 9px; border-radius: 6px; margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+        .sess-empty { color: var(--text-3); font-size: 13px; padding: 10px; }
+        .sess-actions { margin-top: 10px; }
+        .tok-list { font-size: 12px; }
+        .tok-row { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 2px; border-bottom: 1px dashed #e8ecf2; }
+        .tok-row:last-child { border-bottom: none; }
+        .tok-row .tok-time { color: var(--text); min-width: 150px; }
+        .tok-row .tok-prov { color: var(--text-3); }
+        .tok-row .tok-uid { color: var(--primary); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tok-row .tok-nums { color: #c05545; font-weight: 600; margin-left: auto; }
+        .model-list { background: #f8f9fb; border: 1px solid var(--line); padding: 10px; border-radius: 6px; margin-top: 10px; max-height: 150px; overflow-y: auto; }
+        .hidden { display: none; }
+        /* ---- 状态徽标：代替旧版 emoji 标记 ---- */
+        .tag { font-size: 13px; font-weight: 800; letter-spacing: 2px; vertical-align: 1px; }
+        .tag-ok { color: #1e9e5a; }
+        .tag-info { color: var(--primary); }
+        .tag-warn { color: #c9a24f; }
+        .tag-bad { color: var(--bad); }
+        body.night .tag-ok { color: #4ade80; }
+        body.night .tag-info { color: #7fa5ff; }
+        body.night .tag-warn { color: #f0b95a; }
+        body.night .tag-bad { color: #ff8585; }
+        /* ---- 右上角主题切换 ---- */
+        .theme-ctl { margin-left: 10px; display: flex; gap: 6px; }
+        .theme-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: linear-gradient(180deg, #fff, #f2f5fa); cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 #dde3ec; padding: 0; transition: transform .1s, box-shadow .1s; }
+        .theme-btn:active { transform: translateY(2px); box-shadow: none; }
+        .theme-btn svg { width: 20px; height: 20px; }
+        #theme-btn .ic-night { display: none; }
+        body.night #theme-btn .ic-day { display: none; }
+        body.night #theme-btn .ic-night { display: block; }
+        /* ---- 夜间模式 ---- */
+        body.night { --bg: #12151c; --surface: #181d26; --line: #2a3242; --text: #e6eaf2; --text-2: #aab3c5; --text-3: #7d8798; }
+        body.night .container { box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -12px rgba(0,0,0,.6); }
+        body.night .brand-ver, body.night .theme-btn { background: #141924; }
+        body.night .theme-btn { border-color: #2a3242; box-shadow: 0 2px 0 #10141c; }
+        body.night .btn { background: linear-gradient(180deg, rgba(42,50,66,.42), rgba(24,29,40,.4)); border-color: rgba(90,104,132,.5); border-bottom-color: rgba(42,50,66,.7); color: var(--text); box-shadow: 0 2px 0 rgba(10,13,20,.8), 0 4px 10px -2px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07); }
+        body.night .btn:hover { filter: brightness(1.18); border-color: #48566f; }
+        body.night .btn:active { transform: translateY(2px); box-shadow: 0 0 0 #10141c; }
+        body.night .btn-primary { background: linear-gradient(180deg, rgba(91,138,255,.42), rgba(47,85,200,.42)); border-color: rgba(110,150,255,.55); box-shadow: 0 3px 0 rgba(25,50,140,.8), 0 6px 14px -2px rgba(74,125,255,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+        body.night .btn-success { background: linear-gradient(180deg, rgba(38,163,93,.38), rgba(20,110,62,.4)); border-color: rgba(60,180,110,.5); box-shadow: 0 3px 0 rgba(10,70,40,.8), 0 6px 14px -2px rgba(38,163,93,.4), inset 0 1px 0 rgba(255,255,255,.22); }
+        body.night .btn-danger { background: linear-gradient(180deg, rgba(60,34,34,.94), rgba(45,26,26,.94)); border-color: #5c3333; border-bottom-color: #4a2828; color: #ff9c9c; box-shadow: 0 2px 0 #1a0f0f, 0 4px 10px -2px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06); }
+        body.night .btn-danger:hover { background: var(--bad); border-color: var(--bad); color: #fff; }
+        body.night .btn-warning { background: linear-gradient(180deg, rgba(58,48,28,.94), rgba(44,37,22,.94)); border-color: #5c4e2c; color: #e8c26a; box-shadow: 0 2px 0 #191509, 0 4px 10px -2px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06); }
+        body.night input, body.night select, body.night textarea { background: #12161f; border-color: #2a3242; color: var(--text); }
+        body.night input:focus, body.night select:focus, body.night textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(91,138,255,.15); }
+        body.night .status-panel, body.night .model-list { background: #141924; }
+        body.night .status-panel table td { border-color: #1f2734; }
+        body.night .status.online { background: #10241a; color: #5fd394; border-color: #1d4029; }
+        body.night .status.offline { background: #2a1414; color: #ff9c9c; border-color: #4a2020; }
+        body.night .sess-item { background: var(--surface); }
+        body.night .sess-head { background: #141924; }
+        body.night .sess-head:hover { background: #181f2d; }
+        body.night .sess-msg .txt { background: #141924; border-color: #1f2734; color: #c9d2e0; }
+        body.night .tok-row { border-color: #1f2734; }
+        @media (max-width: 700px) {
+            body { margin: 8px; }
+            .container { padding: 14px; }
+            .form-row, .row { flex-direction: column; }
+            .nav-tabs { flex-wrap: wrap; }
+            .tok-row .tok-uid { max-width: 90px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="brand">
+        <svg viewBox="0 0 36 36" fill="none" aria-hidden="true">
+            <rect x="6" y="11" width="24" height="18" rx="5" stroke="#3563e9" stroke-width="2"/>
+            <path d="M18 11V6" stroke="#3563e9" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="18" cy="4.5" r="1.8" fill="#3563e9"/>
+            <circle cx="13.5" cy="19" r="2" fill="#3563e9"/>
+            <circle cx="22.5" cy="19" r="2" fill="#3563e9"/>
+            <path d="M13 24.5h10" stroke="#3563e9" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div>
+            <h1>QQ 机器人 Agent</h1>
+            <div class="brand-sub">本地服务 · 配置与运行管理</div>
+        </div>
+        <span class="brand-ver">v6.0.0</span>
+        <div class="theme-ctl">
+            <button type="button" id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换白天 / 夜间模式">
+                <svg class="ic-day" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" fill="#ffd76a" stroke="#c9a24f" stroke-width="1.6"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2 16.9 7.1M7.1 16.9l-1.9 1.9" stroke="#c9a24f" stroke-width="1.7" stroke-linecap="round"/></svg>
+                <svg class="ic-night" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4 8.3 8.3 0 1 0 20 14.5z" fill="#cfd8ea" stroke="#7d8798" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+    </div>
+    <div id="status-bar" class="status offline">未连接</div>
+    <div id="status-panel" class="status-panel" style="margin-bottom:12px;">
+        <table style="width:100%;font-size:13px;border-collapse:collapse;">
+            <tr>
+                <td style="padding:4px 8px;color:#7f8c8d;width:110px;">服务状态</td>
+                <td style="padding:4px 8px;" id="st-service">—</td>
+                <td style="padding:4px 8px;color:#7f8c8d;width:110px;">QQ 连接</td>
+                <td style="padding:4px 8px;" id="st-qq">—</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px;color:#7f8c8d;">模型连接</td>
+                <td style="padding:4px 8px;" id="st-model-link">—</td>
+                <td style="padding:4px 8px;color:#7f8c8d;">当前模型</td>
+                <td style="padding:4px 8px;" id="st-model">—</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px;color:#7f8c8d;">运行时长</td>
+                <td style="padding:4px 8px;" id="st-uptime">—</td>
+                <td style="padding:4px 8px;color:#7f8c8d;">会话数</td>
+                <td style="padding:4px 8px;" id="st-session">—</td>
+            </tr>
+            <tr>
+                <td style="padding:4px 8px;color:#7f8c8d;">最近错误</td>
+                <td colspan="3" style="padding:4px 8px;" id="st-errors">无</td>
+            </tr>
+        </table>
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="btn btn-primary" onclick="updateStatus()" style="padding:4px 12px;" title="手动刷新链接状态与当前工作模型">刷新状态</button>
+            <span style="font-size:13px;color:#7f8c8d;">快速切换配置：</span>
+            <select id="quick-model-switch" style="padding:5px;border:1px solid #ccc;border-radius:4px;min-width:180px;"></select>
+            <button type="button" class="btn btn-primary" onclick="applyModelConfig()" style="padding:4px 12px;">应用</button>
+            <button type="button" class="btn btn-warning" onclick="saveModelConfig()" style="padding:4px 12px;" title="把当前表单的 Provider/URL/Key/模型保存为一套配置">保存当前为配置</button>
+            <button type="button" class="btn btn-danger" onclick="deleteModelConfig()" style="padding:4px 12px;" title="删除下拉列表中当前选中的已保存配置">删除所选配置</button>
+            <button type="button" class="btn btn-danger" onclick="restartService()" style="padding:4px 12px;" title="重启整个服务（停 bot → 重新拉起）">重启服务</button>
+            <button type="button" class="btn btn-success" onclick="startBot()" style="padding:4px 12px;" title="启动机器人（连接 QQ 网关开始收发消息）">启动机器人</button>
+            <button type="button" class="btn btn-danger" onclick="shutdownAll()" style="padding:4px 12px;" title="停止整个服务及所有相关进程">一键停止服务</button>
+        </div>
+        <div class="hint" style="margin-top:4px;">状态为手动刷新：点「刷新状态」更新；不会自动轮询自检。</div>
+    </div>
+
+    <div style="margin:14px 0 10px; display:flex; gap:8px; align-items:center; border-bottom:2px solid #eee; padding-bottom:10px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" id="tab-main" onclick="switchPanel('main')" style="padding:8px 22px;">主程序</button>
+        <button type="button" class="btn" id="tab-aux" onclick="switchPanel('aux')" style="padding:8px 22px;">辅助程序（独立 bot）</button>
+        <span class="hint">辅助程序是独立 bot：人设/历史各自独立，模型与 QQ 凭证单独填；点「读取主程序配置」可克隆非人设的全局对话设置。</span>
+    </div>
+
+    <div id="panel-main">
+    <form id="config-form">
+        <h3>QQ机器人配置</h3>
+        <div class="row">
+            <div class="form-group">
+                <label>AppID</label>
+                <input id="app_id" placeholder="请输入 AppID" value="">
+            </div>
+            <div class="form-group">
+                <label>AppSecret <span id="app_secret_saved_tag" class="hint" style="font-weight:normal;"></span></label>
+                <input id="app_secret" type="password" autocomplete="new-password" placeholder="请输入 AppSecret" value="">
+            </div>
+        </div>
+
+        <h3>大模型Provider配置</h3>
+        <div class="row">
+            <div class="form-group">
+                <label>Provider</label>
+                <select id="provider_type" onchange="onProviderChange()">
+                    {% for pt, pname, _pbase in PROVIDER_PRESETS %}
+                    <option value="{{ pt }}">{{ pname }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>API Key <span id="api_key_saved_tag" class="hint" style="font-weight:normal;"></span></label>
+                <input id="api_key" type="password" autocomplete="new-password" placeholder="请输入 API Key" value="">
+            </div>
+            <div class="form-group">
+                <label>Base URL (可选)</label>
+                <input id="base_url" placeholder="请输入 Base URL" value="">
+            </div>
+        </div>
+        <div id="key-hint" class="hint" style="margin-top:6px;"></div>
+        <button type="button" class="btn btn-primary" onclick="fetchModels()">获取模型列表</button>
+        <button type="button" class="btn btn-warning" onclick="testConnection()">测试连通性</button>
+        <div id="model-msg" class="hint" style="margin-top:6px;"></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+            <span style="font-size:13px;color:#7f8c8d;">选择模型：</span>
+            <select id="model-pick" style="padding:5px;min-width:240px;"><option value=""></option></select>
+            <button type="button" class="btn btn-primary" onclick="applyModelPick()" style="padding:4px 12px;" title="立即启用所选模型（保存配置并让机器人用新模型重连）">应用</button>
+        </div>
+
+        <h3>对话设置</h3>
+        <div class="form-group">
+            <label>人设 (System Prompt)</label>
+            
+            <textarea id="system_prompt" placeholder=""></textarea>
+        </div>
+        <div class="row">
+            <div class="form-group">
+                <label>最大对话轮数 (清空历史)</label>
+                <input id="max_rounds" type="number" value="5" min="1" max="20">
+            </div>
+            <div class="form-group">
+                <label>Temperature</label>
+                <input id="temperature" type="number" step="0.1" value="0.7" min="0" max="2">
+            </div>
+            <div class="form-group">
+                <label>思考深度</label>
+                <select id="thinking">
+                    <option value="off">关闭</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>模型 (用于聊天)</label>
+                <select id="model">
+                    <option value=""></option>
+                </select>
+            </div>
+        </div>
+
+        <h3>上下文压缩</h3>
+        <div class="row">
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:6px;">
+                    <input id="compression_enabled" type="checkbox" style="width:auto;">
+                    启用压缩
+                </label>
+                <div class="hint" style="margin-top:4px;">当前组对话 token 超限时，把旧对话压成摘要，省 token。</div>
+            </div>
+            <div class="form-group">
+                <label>压缩触发 token 上限</label>
+                <input id="compression_token_limit" type="number" value="60000" min="1000" max="1000000">
+                <div class="hint" style="margin-top:4px;">当前组累计 token 超过此值即触发压缩。</div>
+            </div>
+            <div class="form-group">
+                <label>模型上下文窗口 (token)</label>
+                <input id="model_context_tokens" type="number" value="32768" min="0" max="2000000">
+                <div class="hint" style="margin-top:4px;">实际触发阈值取「压缩上限」与「窗口 60%」的较小值。填 0 表示不按窗口收敛。接口不返回窗口大小，需按模型手填。</div>
+            </div>
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:6px;">
+                    <input id="archive_recall" type="checkbox" style="width:auto;">
+                    归档检索
+                </label>
+                <div class="hint" style="margin-top:4px;">压缩掉和翻篇的原文存入本地归档，按当前消息关键词召回。归档不进常驻上下文，不占 token。</div>
+            </div>
+            <div class="form-group">
+                <label>归档召回条数</label>
+                <input id="archive_recall_top" type="number" value="4" min="1" max="20">
+            </div>
+            <div class="form-group">
+                <label>单用户归档上限</label>
+                <input id="archive_keep" type="number" value="5000" min="0" max="1000000">
+                <div class="hint" style="margin-top:4px;">超出丢最旧的，填 0 表示不限制。命令行可查看与删除：--archive-list / --archive-search / --archive-purge。</div>
+            </div>
+            <div class="form-group">
+                <label>全库归档上限</label>
+                <input id="archive_keep_total" type="number" value="200000" min="0" max="50000000">
+                <div class="hint" style="margin-top:4px;">所有用户合计，防止多群累加撑爆磁盘。</div>
+            </div>
+            <div class="form-group">
+                <label>模型并发上限</label>
+                <input id="max_concurrent" type="number" value="3" min="1" max="20">
+                <div class="hint" style="margin-top:4px;">同时在跑的模型请求数。被刷屏时超出的排队等待，防止打满接口配额。</div>
+            </div>
+            <div class="form-group">
+                <label>会话数上限</label>
+                <input id="max_sessions" type="number" value="1000" min="0" max="100000">
+                <div class="hint" style="margin-top:4px;">超出后淘汰最久未用的会话，填 0 表示不限制。</div>
+            </div>
+            <div class="form-group">
+                <label>history temp 保留组数</label>
+                <input id="history_temp_keep_groups" type="number" value="10" min="1" max="100">
+                <div class="hint" style="margin-top:4px;">自动删除更早组的历史压缩文件，当前组永不删。</div>
+            </div>
+            <div class="form-group">
+                <label style="display:flex;align-items:center;gap:6px;">
+                    <input id="history_temp_cleanup_enabled" type="checkbox" style="width:auto;">
+                    启用自动清理
+                </label>
+                <div class="hint" style="margin-top:4px;">关闭则不自动删旧组压缩文件。</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button type="button" class="btn btn-success" onclick="startBot()">启动机器人</button>
+            <button type="button" class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+            <button type="button" class="btn btn-warning" onclick="clearSessions()">清空对话记录</button>
+        </div>
+        <div class="hint" style="margin-top:10px;">对话记录保存于程序同目录 <b>data/sessions.db</b>（SQLite）。「一键停止服务」会关闭整个程序（包括机器人），停止后本页面不可用；重新双击 <b>start.bat</b> 即可再次启动。</div>
+    </form>
+
+    <h3>对话记录 <span id="sess-total" style="font-weight:normal;font-size:13px;color:#7f8c8d;"></span></h3>
+    <div style="margin-bottom:8px;">
+        <button type="button" class="btn btn-primary" onclick="loadSessions()">刷新</button>
+        <button type="button" class="btn btn-warning" onclick="clearSessions()">清空全部</button>
+    </div>
+    <div id="session-menu"></div>
+    <div class="hint" style="margin-top:8px;">同一 QQ 号合并为一条，点开按「组」展示对话（每 max_rounds 轮一组），可批量删除某组或清空整个 QQ 号。</div>
+
+    <h3 style="margin-top:24px;">Token 消耗 <span id="tok-total" style="font-weight:normal;font-size:13px;color:#7f8c8d;"></span></h3>
+    <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="loadTokenUsage()">刷新</button>
+        <input type="date" id="tok-clear-date" style="padding:5px;border:1px solid #ccc;border-radius:4px;" title="清除该日期之前（不含当天）的消耗记录">
+        <button type="button" class="btn btn-warning" onclick="clearTokenUsageBefore()">清除该日期前记录</button>
+    </div>
+    <div id="token-menu"></div>
+    <div class="hint" style="margin-top:8px;">记录每次调用大模型消耗的 token（本地 data/token_usage.json），点开可查看明细。「清除该日期前记录」会删除所选日期之前的全部消耗记录（当天及之后的保留）。</div>
+</div>
+
+    <div id="panel-aux" class="hidden">
+        <div id="aux-status-bar" class="status offline">辅助程序未启动</div>
+        <div id="aux-status-panel" class="status-panel" style="margin-bottom:12px;">
+            <table style="width:100%;font-size:13px;border-collapse:collapse;">
+                <tr>
+                    <td style="padding:4px 8px;color:#7f8c8d;width:110px;">QQ 连接</td>
+                    <td style="padding:4px 8px;" id="aux-st-qq">—</td>
+                    <td style="padding:4px 8px;color:#7f8c8d;width:110px;">当前模型</td>
+                    <td style="padding:4px 8px;" id="aux-st-model">—</td>
+                </tr>
+            </table>
+            <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button type="button" class="btn btn-primary" onclick="auxRefreshStatus()" style="padding:4px 12px;" title="手动刷新辅助程序状态">刷新状态</button>
+                <button type="button" class="btn btn-success" onclick="startAuxBot()" style="padding:4px 12px;">启动辅助程序</button>
+                <button type="button" class="btn btn-danger" onclick="stopAuxBot()" style="padding:4px 12px;">停止辅助程序</button>
+            </div>
+            <div class="hint" style="margin-top:4px;">辅助程序为独立 bot，状态与配置均独立于主程序，数据存于 aux_data/。</div>
+        </div>
+
+        <div style="margin-bottom:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-warning" onclick="cloneAuxFromMain()" style="padding:8px 16px;" title="把主程序的全局对话设置(max_rounds/temperature/压缩/历史清理)克隆进辅助程序，人设与连接不克隆">读取主程序配置</button>
+            <button type="button" class="btn btn-primary" onclick="auxRefreshConfig()" style="padding:8px 16px;">刷新配置</button>
+            <span class="hint" id="aux-clone-hint"></span>
+        </div>
+
+        <form id="aux-config-form">
+            <h3>辅助程序 · QQ机器人配置（独立）</h3>
+            <div class="row">
+                <div class="form-group">
+                    <label>AppID（可与主程序不同）</label>
+                    <input id="aux_app_id" placeholder="辅助 bot 的 AppID" value="">
+                </div>
+                <div class="form-group">
+                    <label>AppSecret <span id="aux_app_secret_saved_tag" class="hint" style="font-weight:normal;"></span></label>
+                    <input id="aux_app_secret" type="password" autocomplete="new-password" placeholder="辅助 bot 的 AppSecret" value="">
+                </div>
+            </div>
+
+            <h3>辅助程序 · 大模型Provider配置（独立）</h3>
+            <div class="row">
+                <div class="form-group">
+                    <label>Provider</label>
+                    <select id="aux_provider_type" onchange="onAuxProviderChange()">
+                        {% for pt, pname, _pbase in PROVIDER_PRESETS %}
+                        <option value="{{ pt }}">{{ pname }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>API Key <span id="aux_api_key_saved_tag" class="hint" style="font-weight:normal;"></span></label>
+                    <input id="aux_api_key" type="password" autocomplete="new-password" placeholder="辅助 bot 的 API Key" value="">
+                </div>
+                <div class="form-group">
+                    <label>Base URL (可选)</label>
+                    <input id="aux_base_url" placeholder="辅助 bot 的 Base URL" value="">
+                </div>
+            </div>
+            <div id="aux-key-hint" class="hint" style="margin-top:6px;"></div>
+            <button type="button" class="btn btn-primary" onclick="auxFetchModels()">获取模型列表</button>
+            <button type="button" class="btn btn-warning" onclick="auxTestConnection()">测试连通性</button>
+            <div id="aux-model-msg" class="hint" style="margin-top:6px;"></div>
+
+            <h3>辅助程序 · 人设（独立，不克隆主程序）</h3>
+            <div class="form-group">
+                <label>人设 (System Prompt)</label>
+                <textarea id="aux_system_prompt" placeholder="辅助 bot 的专属人设"></textarea>
+            </div>
+
+            <h3>对话设置（点「读取主程序配置」可从主程序克隆，也可单独改）</h3>
+            <div class="row">
+                <div class="form-group">
+                    <label>最大对话轮数 (清空历史)</label>
+                    <input id="aux_max_rounds" type="number" value="5" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label>Temperature</label>
+                    <input id="aux_temperature" type="number" step="0.1" value="0.7" min="0" max="2">
+                </div>
+                <div class="form-group">
+                    <label>思考深度</label>
+                    <select id="aux_thinking">
+                        <option value="off">关闭</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>模型 (用于聊天)</label>
+                    <select id="aux_model">
+                        <option value=""></option>
+                    </select>
+                </div>
+            </div>
+
+            <h3>上下文压缩</h3>
+            <div class="row">
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input id="aux_compression_enabled" type="checkbox" style="width:auto;">
+                        启用压缩
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>压缩触发 token 上限</label>
+                    <input id="aux_compression_token_limit" type="number" value="60000" min="1000" max="1000000">
+                </div>
+                <div class="form-group">
+                    <label>模型上下文窗口 (token)</label>
+                    <input id="aux_model_context_tokens" type="number" value="32768" min="0" max="2000000">
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input id="aux_archive_recall" type="checkbox" style="width:auto;">
+                        归档检索
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>归档召回条数</label>
+                    <input id="aux_archive_recall_top" type="number" value="4" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label>单用户归档上限</label>
+                    <input id="aux_archive_keep" type="number" value="5000" min="0" max="1000000">
+                </div>
+                <div class="form-group">
+                    <label>全库归档上限</label>
+                    <input id="aux_archive_keep_total" type="number" value="200000" min="0" max="50000000">
+                </div>
+                <div class="form-group">
+                    <label>history temp 保留组数</label>
+                    <input id="aux_history_temp_keep_groups" type="number" value="10" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input id="aux_history_temp_cleanup_enabled" type="checkbox" style="width:auto;">
+                        启用自动清理
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button type="button" class="btn btn-success" onclick="startAuxBot()">启动辅助程序</button>
+                <button type="button" class="btn btn-primary" onclick="saveAuxConfig()">保存配置</button>
+                <button type="button" class="btn btn-danger" onclick="stopAuxBot()">停止辅助程序</button>
+            </div>
+            <div class="hint" style="margin-top:10px;">辅助程序的对话记录/历史压缩独立存于 <b>aux_data/</b> 文件夹，与主程序互不干扰。</div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+    
+    // 统一转义入口。任何拼进 innerHTML 的外部数据（聊天内容、模型摘要、
+    // 群成员标识、后端错误信息）都必须先过这里，否则一个诱导模型输出的
+    // 摘要就能在管理界面上执行脚本，进而调用本机接口。
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    // 会话标识通过索引与全局引用传递，不拼进 onclick 字符串，
+    // 避免引号与反斜杠在多层转义里失真。
+    var sessList = [];
+    function toggleSessionIdx(el, i) {
+        var s = sessList[i];
+        if (s) toggleSession(el, s.user_id);
+    }
+
+    const PROVIDER_BASE = {
+        {% for pt, _name, pbase in PROVIDER_PRESETS %}
+        "{{ pt }}": "{{ pbase }}",
+        {% endfor %}
+    };
+    
+    function onProviderChange() {
+        const pt = document.getElementById('provider_type').value;
+        const base = PROVIDER_BASE[pt] || '';
+        const baseInput = document.getElementById('base_url');
+        if (base && !baseInput.value) {
+            baseInput.value = base;
+        }
+        loadThinkingLevels(pt);
+    }
+    
+    async function loadThinkingLevels(pt) {
+        pt = pt || document.getElementById('provider_type').value;
+        try {
+            const resp = await fetch('/api/thinking_levels?provider_type=' + encodeURIComponent(pt));
+            const data = await resp.json();
+            const levels = data.levels || [];
+            const cur = document.getElementById('thinking');
+            let opts = '<option value="off">关闭</option>';
+            (levels || []).forEach(l => { opts += `<option value="${l}">${l}</option>`; });
+            cur.innerHTML = opts;
+        } catch (e) {  }
+    }
+    async function loadConfig() {
+        const resp = await fetch('/api/config');
+        const data = await resp.json();
+        
+        
+        const hasAppSecret = !!data.has_app_secret;
+        const hasApiKey = !!data.has_api_key;
+        const hasBaseUrl = !!data.has_base_url;
+        document.getElementById('app_id').value = data.app_id || '';
+        
+        
+        
+        document.getElementById('app_secret').value = hasAppSecret ? '******' : '';
+        document.getElementById('provider_type').value = data.provider_type || 'deepseek';
+        document.getElementById('api_key').value = hasApiKey ? '******' : '';
+        
+        document.getElementById('base_url').value = data.base_url || '';
+        
+        const tag = ok => ok ? '<span style="color:#27ae60;">(已保存)</span>' : '<span style="color:#c0392b;">(未设置)</span>';
+        const t1 = document.getElementById('app_secret_saved_tag');
+        const t2 = document.getElementById('api_key_saved_tag');
+        if (t1) t1.innerHTML = tag(hasAppSecret);
+        if (t2) t2.innerHTML = tag(hasApiKey);
+        document.getElementById('system_prompt').value = data.system_prompt || '';
+        document.getElementById('max_rounds').value = data.max_rounds || 5;
+        document.getElementById('temperature').value = data.temperature ?? 0.7;
+        
+        window._saved_thinking = data.thinking || 'off';
+        await loadThinkingLevels(data.provider_type || 'deepseek');
+        const thSel = document.getElementById('thinking');
+        const want = (data.thinking && data.thinking !== 'off') ? data.thinking : 'off';
+        thSel.value = want;
+        if (!thSel.value) thSel.value = 'off';  
+        document.getElementById('model').value = data.model || '';
+        const _pick = document.getElementById('model-pick');
+        if (_pick) {
+            if (!_pick.options.length || (_pick.options.length === 1 && !_pick.options[0].value)) _pick.innerHTML = '<option value=""></option>';
+            _pick.value = data.model || '';
+        }
+        
+        const comp = data._compression || {};
+        const ce = document.getElementById('compression_enabled');
+        if (ce) ce.checked = !!(comp.compression_enabled ?? false);
+        const ctl = document.getElementById('compression_token_limit');
+        if (ctl) ctl.value = comp.compression_token_limit ?? 60000;
+        const mctx = document.getElementById('model_context_tokens');
+        if (mctx) mctx.value = comp.model_context_tokens ?? 32768;
+        const arEl = document.getElementById('archive_recall');
+        if (arEl) arEl.checked = comp.archive_recall !== false;
+        const artEl = document.getElementById('archive_recall_top');
+        if (artEl) artEl.value = comp.archive_recall_top ?? 4;
+        const akEl = document.getElementById('archive_keep');
+        if (akEl) akEl.value = comp.archive_keep ?? 5000;
+        const aktEl = document.getElementById('archive_keep_total');
+        if (aktEl) aktEl.value = comp.archive_keep_total ?? 200000;
+        const mcEl = document.getElementById('max_concurrent');
+        if (mcEl) mcEl.value = data.max_concurrent ?? 3;
+        const msEl = document.getElementById('max_sessions');
+        if (msEl) msEl.value = data.max_sessions ?? 1000;
+        const ckeep = document.getElementById('history_temp_keep_groups');
+        if (ckeep) ckeep.value = comp.history_temp_keep_groups ?? 10;
+        const cclean = document.getElementById('history_temp_cleanup_enabled');
+        if (cclean) cclean.checked = !!(comp.history_temp_cleanup_enabled ?? true);
+        
+        const keyMsg = document.getElementById('key-hint');
+        if (keyMsg) {
+            const hasAny = hasApiKey || hasAppSecret || hasBaseUrl;
+            keyMsg.textContent = hasAny
+                ? '敏感字段已保存（显示为 ******），不可还原；留空则沿用已保存，重新输入可更新。'
+                : '尚未保存敏感字段，请填写 API Key 与 AppSecret。';
+        }
+    }
+
+    async function saveConfig() {
+        const payload = getFormData();
+        const resp = await fetch('/api/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        if (resp.ok) {
+            alert('配置已保存');
+            loadConfig();
+        } else {
+            alert('保存失败');
+        }
+    }
+
+    function getFormData() {
+        
+        
+        const secretVal = id => {
+            const v = document.getElementById(id).value;
+            
+            if (v === '' || /^[\\s*•.]+$/.test(v)) return '';
+            return v;
+        };
+        return {
+            app_id: document.getElementById('app_id').value,
+            app_secret: secretVal('app_secret'),
+            provider_type: document.getElementById('provider_type').value,
+            api_key: secretVal('api_key'),
+            base_url: document.getElementById('base_url').value,  
+            system_prompt: document.getElementById('system_prompt').value,
+            max_rounds: parseInt(document.getElementById('max_rounds').value),
+            temperature: parseFloat(document.getElementById('temperature').value),
+            thinking: document.getElementById('thinking').value,
+            model: document.getElementById('model').value,
+            compression_enabled: !!(document.getElementById('compression_enabled')?.checked),
+            compression_token_limit: parseInt(document.getElementById('compression_token_limit')?.value || 60000),
+            model_context_tokens: parseInt(document.getElementById('model_context_tokens')?.value || 0),
+            history_temp_keep_groups: parseInt(document.getElementById('history_temp_keep_groups')?.value || 10),
+            history_temp_cleanup_enabled: !!(document.getElementById('history_temp_cleanup_enabled')?.checked),
+            archive_recall: !!(document.getElementById('archive_recall')?.checked),
+            archive_recall_top: parseInt(document.getElementById('archive_recall_top')?.value || 4),
+            archive_keep: parseInt(document.getElementById('archive_keep')?.value || 5000),
+            archive_keep_total: parseInt(document.getElementById('archive_keep_total')?.value || 200000),
+            max_concurrent: parseInt(document.getElementById('max_concurrent')?.value || 3),
+            max_sessions: parseInt(document.getElementById('max_sessions')?.value || 1000),
+        };
+    }
+
+    async function fetchModels() {
+        const provider_type = document.getElementById('provider_type').value;
+        
+        const api_key = (() => {
+            const v = document.getElementById('api_key').value;
+            return (v === '' || /^[\\s*•.]+$/.test(v)) ? '' : v;
+        })();
+        const base_url = document.getElementById('base_url').value;
+        const resp = await fetch('/api/models', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ provider_type, api_key, base_url })
+        });
+        const msg = document.getElementById('model-msg');
+        if (resp.ok) {
+            const data = await resp.json();
+            const models = data.models || [];
+            if (models.length === 0) {
+                msg.textContent = '未拉到模型（该 provider 可能不支持列模型）。';
+                return;
+            }
+            const sel = document.getElementById('model');
+            const pick = document.getElementById('model-pick');
+            const current = sel.value;
+            const opts = models.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+            sel.innerHTML = opts;
+            pick.innerHTML = '<option value=""></option>' + opts;
+            sel.value = models.includes(current) ? current : models[0];
+            pick.value = sel.value;
+            msg.textContent = `已获取 ${models.length} 个模型，请在下方「选择模型」中选定后点「应用」。`;
+        } else {
+            msg.textContent = '获取模型列表失败';
+        }
+    }
+
+    async function applyModelPick() {
+        const pick = document.getElementById('model-pick');
+        const m = pick ? pick.value : '';
+        if (!m) { alert('请先「获取模型列表」并在下拉框中选中一个模型。'); return; }
+        if (!confirm(`确定应用模型「${m}」吗？\\n将立即保存配置；若机器人运行中会自动用新模型重连。`)) return;
+        document.getElementById('model').value = m;
+        await saveConfig();
+        updateStatus();
+    }
+
+    async function testConnection() {
+        const provider_type = document.getElementById('provider_type').value;
+        
+        const api_key = (() => {
+            const v = document.getElementById('api_key').value;
+            return (v === '' || /^[\\s*•.]+$/.test(v)) ? '' : v;
+        })();
+        const base_url = document.getElementById('base_url').value;
+        const resp = await fetch('/api/test', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ provider_type, api_key, base_url })
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            alert(data.success ? '连通性测试成功！' : '连通性测试失败');
+        } else {
+            alert('测试请求失败');
+        }
+    }
+
+    async function startBot() {
+        const payload = getFormData();
+        
+        
+        let serverCfg = {};
+        try {
+            const r = await fetch('/api/config');
+            if (r.ok) serverCfg = await r.json();
+        } catch (e) {  }
+        const real = {
+            app_id: !!serverCfg.has_app_id,
+            app_secret: !!serverCfg.has_app_secret,
+            api_key: !!serverCfg.has_api_key,
+        };
+        
+        const missingAppId = !payload.app_id && !real.app_id;
+        const missingAppSecret = !payload.app_secret && !real.app_secret;
+        if (missingAppId) { alert('请填写 AppID'); return; }
+        if (missingAppSecret) { alert('请填写 AppSecret'); return; }
+        if (!payload.api_key && !real.api_key) { alert('请填写 API Key'); return; }
+        if (!payload.model) { alert('请先选择模型(点「获取模型列表」后在下拉中选择)'); return; }
+        const resp = await fetch('/api/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        if (resp.ok) {
+            updateStatus();
+        } else {
+            const t = await resp.text();
+            alert('启动失败：' + t);
+        }
+    }
+
+    async function stopBot() {
+        const resp = await fetch('/api/stop', { method: 'POST' });
+        if (resp.ok) {
+            alert('已停止');
+            updateStatus();
+        }
+    }
+
+    async function shutdownApp() {
+        if (!confirm('确定要退出整个服务程序吗？\\n退出后需重新双击 start.bat 才能再访问本页面。')) {
+            return;
+        }
+        try {
+            await fetch('/api/shutdown', { method: 'POST' });
+        } catch (e) {  }
+        alert('服务已退出。');
+    }
+
+    
+    async function ensureRunning() {
+        try {
+            const resp = await fetch('/api/ensure_running', { method: 'POST' });
+            const data = await resp.json();
+            if (data.status === 'already_running') {
+                alert('服务已在运行：' + (data.url || 'http://127.0.0.1:8000'));
+            } else if (data.status === 'starting') {
+                alert('服务启动中... 若 2 秒后本页没刷新，请手动访问 http://127.0.0.1:8000');
+                setTimeout(() => location.reload(), 2500);
+            }
+            updateStatus();
+        } catch (e) {
+            alert('请求失败');
+        }
+    }
+
+    
+    async function shutdownAll() {
+        if (!confirm('确定要一键停止服务吗？\\n将关闭整个程序（包括机器人）。停止后本页面不可用，重新双击 start.bat 可再次启动。')) {
+            return;
+        }
+        try {
+            await fetch('/api/shutdown_all', { method: 'POST' });
+        } catch (e) {  }
+        setStoppedUI();
+        alert('服务已停止。重新双击 start.bat 可再次启动。');
+    }
+
+    function setStoppedUI() {
+        const bar = document.getElementById('status-bar');
+        if (bar) { bar.className = 'status offline'; bar.textContent = '服务已停止'; }
+        const bad = '<span class="tag tag-bad">已停止</span>';
+        const stService = document.getElementById('st-service');
+        const stQq = document.getElementById('st-qq');
+        if (stService) stService.innerHTML = bad + ' 未运行';
+        if (stQq) stQq.innerHTML = bad + ' 未连接';
+    }
+
+    async function clearSessions() {
+        
+        if (!confirm('确定要清空全部对话记录吗？\\n将删除所有用户的所有组对话 + 全部 history temp 压缩记录，此操作无法恢复！')) {
+            return;
+        }
+        const r = prompt('此操作不可恢复。请输入「确认删除」以继续：', '');
+        if (r !== '确认删除') {
+            alert('已取消删除。');
+            return;
+        }
+        try {
+            const resp = await fetch('/api/clear_sessions', { method: 'POST' });
+            const data = await resp.json();
+            alert(data.status === 'cleared' ? `已清空 ${data.cleared} 个会话的对话记录。` : '清空失败');
+            loadSessions();
+        } catch (e) {
+            alert('清空请求失败');
+        }
+    }
+
+    
+    async function loadSessions() {
+        try {
+            const resp = await fetch('/api/sessions');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const sessions = data.sessions || [];
+            document.getElementById('sess-total').textContent = `（${sessions.length} 个QQ号）`;
+            const menu = document.getElementById('session-menu');
+            if (sessions.length === 0) {
+                menu.innerHTML = '<div class="sess-empty">暂无对话记录。</div>';
+                return;
+            }
+            sessList = sessions;
+            menu.innerHTML = sessions.map((s, i) => {
+                const t = new Date(s.last_used * 1000);
+                const timeStr = t.toLocaleString('zh-CN', { hour12: false });
+                const uid = esc(s.user_id);
+                const curTag = `<span style="color:#27ae60;font-size:12px;">（当前第 ${s.current_group} 组）</span>`;
+                return `<div class="sess-item">
+                    <div class="sess-head" onclick="toggleSessionIdx(this, ${i})">
+                        <span>
+                            <span class="uid">${uid}</span>
+                            <span class="meta">${s.group_count} 组 · ${s.rounds} 轮 · ${timeStr}</span>
+                            ${curTag}
+                        </span>
+                        <span class="arrow">▶</span>
+                    </div>
+                    <div class="sess-body" id="sess-body-${i}"></div>
+                </div>`;
+            }).join('');
+        } catch (e) { }
+    }
+
+    async function loadTokenUsage() {
+        try {
+            const resp = await fetch('/api/token_usage');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const recs = data.records || [];
+            const sum = data.summary || {};
+            document.getElementById('tok-total').textContent =
+                `（${sum.count || 0} 次 · 输入 ${sum.prompt_tokens || 0} · 输出 ${sum.completion_tokens || 0} · 合计 ${sum.total_tokens || 0} tokens · 缓存命中 ${sum.cache_hit_tokens || 0} / 未命中 ${sum.cache_miss_tokens || 0}）`;
+            const menu = document.getElementById('token-menu');
+            if (recs.length === 0) {
+                menu.innerHTML = '<div class="sess-empty">暂无 token 消耗记录。</div>';
+                return;
+            }
+            const groups = {};
+            recs.forEach(r => {
+                const day = (r.time || '').slice(0, 10) || '未知';
+                (groups[day] = groups[day] || []).push(r);
+            });
+            const days = Object.keys(groups);
+            menu.innerHTML = days.map((day, gi) => {
+                const dayRecs = groups[day];
+                const dayTotal = dayRecs.reduce((a, r) => a + (r.total_tokens || 0), 0);
+                const items = dayRecs.map((r, ri) => {
+                    const t = r.time || '';
+                    const cacheTag = (r.cache_hit_tokens || r.cache_miss_tokens)
+                        ? `<span style="color:#8e44ad;">（缓存命中 ${r.cache_hit_tokens || 0} / 未命中 ${r.cache_miss_tokens || 0}）</span>` : '';
+                    return `<div class="tok-row">
+                        <span class="tok-time">${t}</span>
+                        <span class="tok-prov">${r.provider || ''} · ${r.model || ''}</span>
+                        <span class="tok-uid">${r.user_id || ''}</span>
+                        <span class="tok-nums">输入 ${r.prompt_tokens || 0} / 输出 ${r.completion_tokens || 0} / 合计 ${r.total_tokens || 0} ${cacheTag}</span>
+                    </div>`;
+                }).join('');
+                return `<div class="sess-item">
+                    <div class="sess-head" onclick="toggleTokenDay(this)">
+                        <span>
+                            <span class="uid">${day}</span>
+                            <span class="meta">${dayRecs.length} 次 · 合计 ${dayTotal} tokens</span>
+                        </span>
+                        <span class="arrow">▶</span>
+                    </div>
+                    <div class="sess-body" id="tok-body-${gi}"><div class="tok-list">${items}</div></div>
+                </div>`;
+            }).join('');
+        } catch (e) { }
+    }
+
+    function toggleTokenDay(headEl) {
+        const body = headEl.nextElementSibling;
+        const isOpen = body.classList.contains('open');
+        if (isOpen) {
+            body.classList.remove('open');
+            headEl.classList.remove('open');
+        } else {
+            body.classList.add('open');
+            headEl.classList.add('open');
+        }
+    }
+
+    async function clearTokenUsageBefore() {
+        const dateVal = document.getElementById('tok-clear-date').value;
+        if (!dateVal) {
+            alert('请先选择日期。');
+            return;
+        }
+        if (!confirm(`确定要删除 ${dateVal} 之前的所有 token 消耗记录吗？\\n当天及之后的记录会保留，此操作无法恢复。`)) {
+            return;
+        }
+        try {
+            const resp = await fetch('/api/token_usage/clear_before', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: dateVal })
+            });
+            const data = await resp.json();
+            if (data.status === 'cleared') {
+                alert(`已删除 ${data.date} 之前的记录，共 ${data.removed} 条。`);
+                loadTokenUsage();
+            } else {
+                alert('删除失败：' + (data.detail || ''));
+            }
+        } catch (e) {
+            alert('删除请求失败');
+        }
+    }
+
+    async function toggleSession(headEl, uid) {
+        const body = headEl.nextElementSibling;
+        const isOpen = body.classList.contains('open');
+        if (isOpen) {
+            body.classList.remove('open');
+            headEl.classList.remove('open');
+            return;
+        }
+        body.classList.add('open');
+        headEl.classList.add('open');
+        try {
+            const resp = await fetch('/api/session?user_id=' + encodeURIComponent(uid));
+            if (!resp.ok) {
+                body.innerHTML = '<div class="sess-empty">加载失败。</div>';
+                return;
+            }
+            const data = await resp.json();
+            const groups = data.groups || [];
+            if (groups.length === 0) {
+                body.innerHTML = '<div class="sess-empty">该会话暂无组。</div>';
+                return;
+            }
+            body.dataset.uid = uid;
+            const html = groups.map(g => {
+                const cur = (g.group_id === data.current_group);
+                const histHtml = (g.history && g.history.length)
+                    ? g.history.map(m => {
+                        const role = m.role === 'user' ? 'user' : 'assistant';
+                        const content = esc(m.content || '');
+                        return `<div class="sess-msg">
+                            <div class="role ${role}">${role === 'user' ? '用户' : '机器人'}</div>
+                            <div class="txt">${content}</div>
+                        </div>`;
+                    }).join('')
+                    : '<div class="sess-empty">该组暂无消息。</div>';
+                const compTag = (g.compressed_count > 0)
+                    ? `<div class="hint" style="margin-top:4px;">已压缩 ${g.compressed_count} 次` + (g.last_summary ? `，摘要：${esc(g.last_summary)}...` : '') + `</div>`
+                    : '';
+                return `<div class="grp-block" style="border:1px solid #eee;border-radius:4px;margin-bottom:8px;padding:8px;">
+                    <div class="grp-head" style="font-weight:bold;color:#2c3e50;margin-bottom:6px;">
+                        第 ${g.group_id} 组（${g.rounds} 轮）${cur ? '<span style="color:#27ae60;">[当前]</span>' : ''}
+                        <button type="button" class="btn btn-warning" style="float:right;font-size:12px;padding:2px 8px;" onclick="clearOneGroup(this.closest('.sess-body').dataset.uid, ${g.group_id})">删该组</button>
+                    </div>
+                    ${compTag}
+                    ${histHtml}
+                </div>`;
+            }).join('');
+            body.innerHTML = html +
+                `<div class="sess-actions" style="margin-top:10px;">
+                    <button type="button" class="btn btn-warning" onclick="clearOneSession(this.closest('.sess-body').dataset.uid)">删除该 QQ 号全部对话</button>
+                </div>`;
+        } catch (e) {
+            body.innerHTML = '<div class="sess-empty">加载失败。</div>';
+        }
+    }
+
+    async function clearOneGroup(uid, gid) {
+        if (!confirm(`确定要删除 ${uid} 的第 ${gid} 组对话吗？该组压缩记录也会一并删除，无法恢复。`)) return;
+        try {
+            const resp = await fetch('/api/clear_group', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: uid, group_id: gid })
+            });
+            const data = await resp.json();
+            if (data.status === 'cleared') {
+                alert(`已删除 ${uid} 的第 ${gid} 组。`);
+                loadSessions();
+            } else {
+                alert('删除失败：' + (data.detail || ''));
+            }
+        } catch (e) {
+            alert('删除请求失败');
+        }
+    }
+
+    async function clearOneSession(uid) {
+        if (!confirm(`确定要清除 ${uid} 的全部对话（所有组 + 压缩记录）吗？此操作无法恢复。`)) return;
+        try {
+            const resp = await fetch('/api/clear_session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: uid })
+            });
+            const data = await resp.json();
+            if (data.status === 'cleared') {
+                alert(`已清除 ${uid} 的全部对话。`);
+                loadSessions();
+            } else {
+                alert('清除失败：' + (data.detail || ''));
+            }
+        } catch (e) {
+            alert('清除请求失败');
+        }
+    }
+
+    async function updateStatus() {
+        try {
+            const resp = await fetch('/api/status');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            
+            const bar = document.getElementById('status-bar');
+            if (bar) {
+                if (data.qq_connected) {
+                    bar.className = 'status online';
+                    bar.textContent = '已连接 · QQ 网关在线';
+                } else {
+                    bar.className = 'status offline';
+                    bar.textContent = '未连接 · QQ 网关离线';
+                }
+            }
+            
+            const ok = '<span class="tag tag-ok">正常</span>';
+            const bad = '<span class="tag tag-bad">未连接</span>';
+            const off = '<span class="tag tag-bad">未运行</span>';
+            const nocfg = '<span class="tag tag-bad">未配置</span>';
+            const stService = document.getElementById('st-service');
+            const stQq = document.getElementById('st-qq');
+            const stModelLink = document.getElementById('st-model-link');
+            const stModel = document.getElementById('st-model');
+            if (stService) stService.innerHTML = data.service_running ? ok + ' 运行中' : off + ' 未运行';
+            if (stQq) stQq.innerHTML = data.qq_connected ? ok + ' 已连接' : bad + ' 未连接';
+            const hasModelCfg = data.provider_type && data.model;
+            if (stModelLink) stModelLink.innerHTML = hasModelCfg ? ok + ` ${esc(data.provider_type || '')}` : nocfg + ' 未配置';
+            if (stModel) stModel.innerHTML = data.model ? `<span class="st-ok">${esc(data.model)}</span>` : '<span class="st-bad">未选择</span>';
+            const stUptime = document.getElementById('st-uptime');
+            const stSess = document.getElementById('st-session');
+            const stErr = document.getElementById('st-errors');
+            if (stUptime) {
+                const up = data.uptime || 0;
+                const h = Math.floor(up / 3600), m = Math.floor(up % 3600 / 60);
+                stUptime.textContent = (h ? h + '时' : '') + m + '分';
+            }
+            if (stSess) stSess.textContent = String(data.session_count || 0);
+            if (stErr) {
+                const es = data.recent_errors || [];
+                stErr.innerHTML = es.length ? es.map(function(x){ return '<div style="color:#c0392b;font-size:12px">' + esc(x) + '</div>'; }).join('') : '无';
+            }
+        } catch (e) {  }
+    }
+
+    
+    async function loadModelConfigs() {
+        try {
+            const resp = await fetch('/api/model_configs');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const sel = document.getElementById('quick-model-switch');
+            if (!sel) return;
+            const configs = data.configs || [];
+            if (configs.length === 0) {
+                sel.innerHTML = '<option value="">（暂无已保存配置）</option>';
+                return;
+            }
+            sel.innerHTML = configs.map(c => {
+                const label = `${c.name}（${c.provider_type || ''} · ${c.model || ''}${c.has_api_key ? ' · key✓' : ''}）`;
+                const cur = (c.name === data.current) ? ' [当前]' : '';
+                return `<option value="${c.name.replace(/"/g, '&quot;')}">${label}${cur}</option>`;
+            }).join('');
+        } catch (e) {  }
+    }
+
+    async function applyModelConfig() {
+        const sel = document.getElementById('quick-model-switch');
+        const name = sel ? sel.value : '';
+        if (!name) { alert('请先选择要应用的配置。'); return; }
+        if (!confirm(`确定切换到配置「${name}」吗？\\n将更新 Provider/Base URL/API Key/模型，若机器人运行中会自动用新模型重连。`)) return;
+        try {
+            const resp = await fetch('/api/model_configs/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await resp.json();
+            if (data.status === 'applied') {
+                alert(`已切换到「${name}」。`);
+                loadConfig();
+                loadModelConfigs();
+                updateStatus();
+            } else {
+                alert('切换失败：' + (data.detail || ''));
+            }
+        } catch (e) {
+            alert('切换请求失败');
+        }
+    }
+
+    async function saveModelConfig() {
+        const name = prompt('给这套配置起个名字（如：DeepSeek-V4 / GLM-5.1 / 备用Key）：', '');
+        if (!name) return;
+        try {
+            const resp = await fetch('/api/model_configs/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await resp.json();
+            if (data.status === 'saved') {
+                alert(`已保存配置「${name}」（Provider/URL/Key/模型）。`);
+                loadModelConfigs();
+            } else {
+                alert('保存失败：' + (data.detail || ''));
+            }
+        } catch (e) {
+            alert('保存请求失败');
+        }
+    }
+
+    async function deleteModelConfig() {
+        const sel = document.getElementById('quick-model-switch');
+        const name = sel ? sel.value : '';
+        if (!name) { alert('请先在下拉框选择要删除的配置。'); return; }
+        if (!confirm(`确定要删除已保存的配置「${name}」吗？\\n仅删除该套配置，不影响当前正在使用的设置。`)) return;
+        try {
+            const resp = await fetch('/api/model_configs/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                alert(`已删除配置「${name}」。`);
+                loadModelConfigs();
+            } else {
+                alert('删除失败：' + (data.detail || ''));
+            }
+        } catch (e) {
+            alert('删除请求失败');
+        }
+    }
+
+    async function restartService() {
+        if (!confirm('确定要重启整个服务吗？\\n将停止机器人并重新启动服务进程，页面会短暂断开后需重新加载。')) return;
+        try {
+            const resp = await fetch('/api/restart', { method: 'POST' });
+            const data = await resp.json();
+            if (data.status === 'restarting') {
+                alert('服务重启中... 几秒后请刷新页面。');
+                setTimeout(() => location.reload(), 6000);
+            }
+        } catch (e) {
+            
+            setTimeout(() => location.reload(), 6000);
+        }
+    }
+
+    
+    function switchPanel(which) {
+        const main = document.getElementById('panel-main');
+        const aux = document.getElementById('panel-aux');
+        const tabMain = document.getElementById('tab-main');
+        const tabAux = document.getElementById('tab-aux');
+        if (which === 'aux') {
+            main.classList.add('hidden');
+            aux.classList.remove('hidden');
+            tabMain.className = 'btn';
+            tabMain.style.background = '';
+            tabMain.style.color = '';
+            tabAux.className = 'btn btn-primary';
+            tabAux.style.background = '';
+            tabAux.style.color = '';
+            auxRefreshConfig();   
+            auxRefreshStatus();
+        } else {
+            aux.classList.add('hidden');
+            main.classList.remove('hidden');
+            tabAux.className = 'btn';
+            tabAux.style.background = '';
+            tabAux.style.color = '';
+            tabMain.className = 'btn btn-primary';
+            tabMain.style.background = '';
+            tabMain.style.color = '';
+        }
+    }
+
+    
+    async function loadAuxThinkingLevels(pt) {
+        pt = pt || document.getElementById('aux_provider_type').value;
+        try {
+            const resp = await fetch('/api/thinking_levels?provider_type=' + encodeURIComponent(pt));
+            const data = await resp.json();
+            const levels = data.levels || [];
+            const cur = document.getElementById('aux_thinking');
+            let opts = '<option value="off">关闭</option>';
+            (levels || []).forEach(l => { opts += `<option value="${l}">${l}</option>`; });
+            cur.innerHTML = opts;
+        } catch (e) {  }
+    }
+
+    function onAuxProviderChange() {
+        const pt = document.getElementById('aux_provider_type').value;
+        const base = PROVIDER_BASE[pt] || '';
+        const baseInput = document.getElementById('aux_base_url');
+        if (base && !baseInput.value) {
+            baseInput.value = base;
+        }
+        loadAuxThinkingLevels(pt);
+    }
+
+    function getAuxFormData() {
+        const secretVal = id => {
+            const v = document.getElementById(id).value;
+            if (v === '' || /^[\\s*•.]+$/.test(v)) return '';
+            return v;
+        };
+        return {
+            app_id: document.getElementById('aux_app_id').value,
+            app_secret: secretVal('aux_app_secret'),
+            provider_type: document.getElementById('aux_provider_type').value,
+            api_key: secretVal('aux_api_key'),
+            base_url: document.getElementById('aux_base_url').value,
+            system_prompt: document.getElementById('aux_system_prompt').value,
+            max_rounds: parseInt(document.getElementById('aux_max_rounds').value),
+            temperature: parseFloat(document.getElementById('aux_temperature').value),
+            thinking: document.getElementById('aux_thinking').value,
+            model: document.getElementById('aux_model').value,
+            compression_enabled: !!(document.getElementById('aux_compression_enabled')?.checked),
+            compression_token_limit: parseInt(document.getElementById('aux_compression_token_limit')?.value || 60000),
+            model_context_tokens: parseInt(document.getElementById('aux_model_context_tokens')?.value || 0),
+            history_temp_keep_groups: parseInt(document.getElementById('aux_history_temp_keep_groups')?.value || 10),
+            history_temp_cleanup_enabled: !!(document.getElementById('aux_history_temp_cleanup_enabled')?.checked),
+            archive_recall: !!(document.getElementById('aux_archive_recall')?.checked),
+            archive_recall_top: parseInt(document.getElementById('aux_archive_recall_top')?.value || 4),
+            archive_keep: parseInt(document.getElementById('aux_archive_keep')?.value || 5000),
+            archive_keep_total: parseInt(document.getElementById('aux_archive_keep_total')?.value || 200000),
+        };
+    }
+
+    async function loadAuxConfig() {
+        const resp = await fetch('/api/aux/config');
+        const data = await resp.json();
+        const hasAppSecret = !!data.has_app_secret;
+        const hasApiKey = !!data.has_api_key;
+        const hasBaseUrl = !!data.has_base_url;
+        document.getElementById('aux_app_id').value = data.app_id || '';
+        document.getElementById('aux_app_secret').value = hasAppSecret ? '******' : '';
+        document.getElementById('aux_provider_type').value = data.provider_type || 'deepseek';
+        document.getElementById('aux_api_key').value = hasApiKey ? '******' : '';
+        document.getElementById('aux_base_url').value = data.base_url || '';
+        const tag = ok => ok ? '<span style="color:#27ae60;">(已保存)</span>' : '<span style="color:#c0392b;">(未设置)</span>';
+        const t1 = document.getElementById('aux_app_secret_saved_tag');
+        const t2 = document.getElementById('aux_api_key_saved_tag');
+        if (t1) t1.innerHTML = tag(hasAppSecret);
+        if (t2) t2.innerHTML = tag(hasApiKey);
+        document.getElementById('aux_system_prompt').value = data.system_prompt || '';
+        document.getElementById('aux_max_rounds').value = data.max_rounds || 5;
+        document.getElementById('aux_temperature').value = data.temperature ?? 0.7;
+        window._saved_aux_thinking = data.thinking || 'off';
+        await loadAuxThinkingLevels(data.provider_type || 'deepseek');
+        const thSel = document.getElementById('aux_thinking');
+        const want = (data.thinking && data.thinking !== 'off') ? data.thinking : 'off';
+        thSel.value = want;
+        if (!thSel.value) thSel.value = 'off';
+        document.getElementById('aux_model').value = data.model || '';
+        const comp = data._compression || {};
+        const ce = document.getElementById('aux_compression_enabled');
+        if (ce) ce.checked = !!(comp.compression_enabled ?? false);
+        const ctl = document.getElementById('aux_compression_token_limit');
+        if (ctl) ctl.value = comp.compression_token_limit ?? 60000;
+        const mctx = document.getElementById('aux_model_context_tokens');
+        if (mctx) mctx.value = comp.model_context_tokens ?? 32768;
+        const arEl = document.getElementById('aux_archive_recall');
+        if (arEl) arEl.checked = comp.archive_recall !== false;
+        const artEl = document.getElementById('aux_archive_recall_top');
+        if (artEl) artEl.value = comp.archive_recall_top ?? 4;
+        const akEl = document.getElementById('aux_archive_keep');
+        if (akEl) akEl.value = comp.archive_keep ?? 5000;
+        const aktEl = document.getElementById('aux_archive_keep_total');
+        if (aktEl) aktEl.value = comp.archive_keep_total ?? 200000;
+        const ckeep = document.getElementById('aux_history_temp_keep_groups');
+        if (ckeep) ckeep.value = comp.history_temp_keep_groups ?? 10;
+        const cclean = document.getElementById('aux_history_temp_cleanup_enabled');
+        if (cclean) cclean.checked = !!(comp.history_temp_cleanup_enabled ?? true);
+        const keyMsg = document.getElementById('aux-key-hint');
+        if (keyMsg) {
+            const hasAny = hasApiKey || hasAppSecret || hasBaseUrl;
+            keyMsg.textContent = hasAny
+                ? '敏感字段已保存（显示为 ******），不可还原；留空则沿用已保存，重新输入可更新。'
+                : '尚未保存敏感字段，请填写 API Key 与 AppSecret。';
+        }
+    }
+
+    async function auxRefreshConfig() {
+        await loadAuxConfig();
+        const hint = document.getElementById('aux-clone-hint');
+        if (hint) hint.textContent = '';
+    }
+
+    async function saveAuxConfig() {
+        const payload = getAuxFormData();
+        const resp = await fetch('/api/aux/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        if (resp.ok) {
+            alert('辅助程序配置已保存');
+            loadAuxConfig();
+        } else {
+            const t = await resp.text();
+            alert('保存失败：' + t);
+        }
+    }
+
+    async function auxRefreshStatus() {
+        try {
+            const resp = await fetch('/api/aux/status');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const bar = document.getElementById('aux-status-bar');
+            if (bar) {
+                if (data.qq_connected) {
+                    bar.className = 'status online';
+                    bar.textContent = '已连接 · 辅助网关在线';
+                } else {
+                    bar.className = 'status offline';
+                    bar.textContent = '未连接 · 辅助网关离线';
+                }
+            }
+            const ok = '<span class="tag tag-ok">正常</span>';
+            const bad = '<span class="tag tag-bad">未连接</span>';
+            const stQq = document.getElementById('aux-st-qq');
+            const stModel = document.getElementById('aux-st-model');
+            if (stQq) stQq.innerHTML = data.qq_connected ? ok + ' 已连接' : bad + ' 未连接';
+            if (stModel) stModel.innerHTML = data.model ? `<span class="st-ok">${esc(data.model)}</span>` : '<span class="st-bad">未选择</span>';
+        } catch (e) {  }
+    }
+
+    async function cloneAuxFromMain() {
+        try {
+            const resp = await fetch('/api/aux/clone', { method: 'POST' });
+            if (resp.ok) {
+                const data = await resp.json();
+                await loadAuxConfig();
+                auxRefreshStatus();
+                const hint = document.getElementById('aux-clone-hint');
+                if (hint) {
+                    const keys = Object.keys(data.cloned || {});
+                    hint.innerHTML = '<span style="color:#27ae60;">已克隆 ' + keys.length + ' 项全局对话设置（人设/连接未动）</span>';
+                }
+            } else {
+                const t = await resp.text();
+                alert('克隆失败：' + t);
+            }
+        } catch (e) {
+            alert('克隆请求失败');
+        }
+    }
+
+    async function startAuxBot() {
+        const payload = getAuxFormData();
+        let serverCfg = {};
+        try {
+            const r = await fetch('/api/aux/config');
+            if (r.ok) serverCfg = await r.json();
+        } catch (e) {  }
+        const real = {
+            app_id: !!serverCfg.has_app_id,
+            app_secret: !!serverCfg.has_app_secret,
+            api_key: !!serverCfg.has_api_key,
+        };
+        const missingAppId = !payload.app_id && !real.app_id;
+        const missingAppSecret = !payload.app_secret && !real.app_secret;
+        if (missingAppId) { alert('请填写辅助程序 AppID（注意：AppID 不随「读取主程序配置」克隆，须单独填）'); return; }
+        if (missingAppSecret) { alert('请填写辅助程序 AppSecret'); return; }
+        if (!payload.api_key && !real.api_key) { alert('请填写辅助程序 API Key'); return; }
+        if (!payload.model) { alert('请先选择辅助程序模型(点「获取模型列表」后选择)'); return; }
+        const resp = await fetch('/api/aux/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        if (resp.ok) {
+            alert('辅助程序启动中...');
+            auxRefreshStatus();
+        } else {
+            const t = await resp.text();
+            alert('启动失败：' + t);
+        }
+    }
+
+    async function stopAuxBot() {
+        try {
+            const resp = await fetch('/api/aux/stop', { method: 'POST' });
+            if (resp.ok) {
+                alert('辅助程序已停止');
+                auxRefreshStatus();
+            } else {
+                const t = await resp.text();
+                alert('停止失败：' + t);
+            }
+        } catch (e) {
+            alert('停止请求失败');
+        }
+    }
+
+    async function auxFetchModels() {
+        const provider_type = document.getElementById('aux_provider_type').value;
+        const api_key = (() => {
+            const v = document.getElementById('aux_api_key').value;
+            return (v === '' || /^[\\s*•.]+$/.test(v)) ? '' : v;
+        })();
+        const base_url = document.getElementById('aux_base_url').value;
+        const resp = await fetch('/api/aux/models', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ provider_type, api_key, base_url })
+        });
+        const msg = document.getElementById('aux-model-msg');
+        if (resp.ok) {
+            const data = await resp.json();
+            const models = data.models || [];
+            if (models.length === 0) {
+                msg.textContent = '未拉到模型（该 provider 可能不支持列模型）。';
+                return;
+            }
+            const sel = document.getElementById('aux_model');
+            const current = sel.value;
+            sel.innerHTML = models.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+            sel.value = models.includes(current) ? current : models[0];
+            msg.textContent = `已获取 ${models.length} 个模型，请从下拉列表选择。`;
+        } else {
+            const t = await resp.text();
+            msg.textContent = '获取模型列表失败：' + t;
+        }
+    }
+
+    async function auxTestConnection() {
+        const provider_type = document.getElementById('aux_provider_type').value;
+        const api_key = (() => {
+            const v = document.getElementById('aux_api_key').value;
+            return (v === '' || /^[\\s*•.]+$/.test(v)) ? '' : v;
+        })();
+        const base_url = document.getElementById('aux_base_url').value;
+        const resp = await fetch('/api/aux/test', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ provider_type, api_key, base_url })
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            alert(data.success ? '辅助程序连通性测试成功！' : '辅助程序连通性测试失败');
+        } else {
+            const t = await resp.text();
+            alert('测试请求失败：' + t);
+        }
+    }
+
+    /* ---- 主题：日夜切换（纯 CSS 主题，无光照引擎） ---- */
+    let _theme = localStorage.getItem('qa_theme') || 'day';
+
+    function applyTheme() {
+        const b = document.body;
+        b.classList.toggle('night', _theme === 'night');
+        try {
+            localStorage.setItem('qa_theme', _theme);
+        } catch (e) { /* 隐私模式下 localStorage 不可用，静默降级 */ }
+    }
+
+    function toggleTheme() { _theme = (_theme === 'night') ? 'day' : 'night'; applyTheme(); }
+    applyTheme();
+
+    window.onload = function() {
+        loadConfig();
+        updateStatus();
+        loadSessions();
+        loadTokenUsage();
+        loadModelConfigs();
+        setInterval(function() { updateStatus(); }, 5000);
+    };
+</script>
+</body>
+</html>

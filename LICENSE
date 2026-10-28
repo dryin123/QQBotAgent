@@ -1,0 +1,98 @@
+# MIT License · Personal Use & Non-Commercial Additional Terms
+
+SPDX-License-Identifier: MIT
+
+Version 1.2 · Copyright (c) 2026 QQBotAgent contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+# 附加条款 · Additional Terms
+
+以下附加条款与上述 MIT 条款一并适用；如与本许可其他部分冲突，以附加条款为准。
+The following additional terms apply together with the MIT license above; in case of conflict, the additional terms prevail.
+
+## 1. 非商业使用限制 · Non-Commercial Use Restriction
+
+本软件**仅允许个人自用**（学习、研究、私有部署、个人数据存储）。**禁止任何形式的商业使用**——出售、转售、商业部署、付费服务、营利性运营；将本软件或其衍生作品用于商业用途后对外发布。
+
+This software is permitted for **personal use only** (learning, research, private deployment, personal data storage). **Any commercial use is strictly prohibited** — selling, reselling, commercial deployment, paid services, or for-profit operation; publishing this software or its derivatives for commercial purposes.
+
+## 2. 免责声明 · Disclaimer of Warranty
+
+本软件**免费提供**，不构成任何销售合同、服务合同或委托关系；本项目仅供学习研究，按「现状」（AS-IS）提供，**不附带任何明示或暗示的陈述或担保**，包括但不限于：适销性、特定用途适用性、不侵犯第三方权利、可靠性、安全性、稳定性、无缺陷、运行不中断、与任何硬件或系统兼容。**源码完全公开，使用者在使用前应自行审查代码、自行评估安全风险**；作者不保证本软件不存在安全漏洞或缺陷。使用本软件的**全部风险由使用者自行承担**。
+
+This software is **provided free of charge** and does not constitute any sales contract, service contract, or agency relationship. This project is for learning and research only, provided "AS-IS", **WITHOUT ANY REPRESENTATIONS OR WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED**, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, RELIABILITY, SAFETY, STABILITY, FREEDOM FROM DEFECTS, UNINTERRUPTED OPERATION, OR COMPATIBILITY WITH ANY HARDWARE OR SYSTEM. **The source code is fully open; users should review the code and assess security risks on their own before use.** The author makes no warranty that the software is free of security vulnerabilities or defects. ALL RISK ARISING FROM THE USE OF THE SOFTWARE IS BORNE BY THE USER.
+
+## 3. 责任限制 · Limitation of Liability
+
+3.1 在任何法律理论下（合同、侵权、严格责任或其他），**作者及贡献者（含其关联方、雇员）均不对任何索赔、损害或其他责任负责**——包括但不限于直接、间接、偶然、特殊、后果性或惩罚性损害（如利润损失、数据丢失、业务中断、账号异常、封禁、违反第三方平台规则、经济损失、名誉损害、律师费用），**即使已被告知可能发生此类损害**。
+
+3.1 Under any legal theory (contract, tort, strict liability, or otherwise), **the author and contributors (including their affiliates and employees) shall not be liable for any claim, damages, or other liability** — including but not limited to direct, indirect, incidental, special, consequential, or punitive damages (such as lost profits, data loss, service interruption, account issues, bans, violations of third-party platform rules, economic loss, reputational harm, or attorney fees), **EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES**.
+
+3.2 **责任总额上限**：即使前述免责被任何司法辖区认定为无效或不可执行，在任何情况下，作者对使用者的**总赔偿责任不超过 0 元（零）**；在无法适用零赔偿的法域，上限不超过 1 元人民币（或等值 1 美元）。
+
+3.2 **Cap on total liability**: even if the foregoing disclaimers are held invalid or unenforceable in any jurisdiction, in no event shall the author's total liability to the user exceed **zero (0)**, or, in jurisdictions where a zero cap is not enforceable, one (1) RMB (or its equivalent in one (1) US Dollar).
+
+3.3 **禁止追偿**：使用者因使用、修改、部署本软件或其衍生作品（包括但不限于因模型生成内容、违反第三方平台规则、涉嫌侵权等）被任何第三方追责或索赔的，由使用者**自行处理并独立承担全部责任**，**不得**要求作者赔偿、补偿、承担连带责任或代为承担责任。
+
+3.3 **No indemnification / no recourse**: if the user is pursued or claimed by any third party due to the use, modification, or deployment of this software or its derivatives (including but not limited to model-generated content, violations of third-party platform rules, or alleged infringement), the user shall **handle and bear all liability independently**, and shall **not** require the author to compensate, indemnify, assume joint liability, or otherwise respond on the user's behalf.
+
+## 4. 模型生成内容免责 · Disclaimer for Model-Generated Content
+
+本项目为 AI 聊天机器人，所有回复内容由**第三方大语言模型生成**，作者不对任何模型生成内容的准确性、合法性、合规性、真实性或适当性作任何保证或承担任何责任。使用者应自行判断并承担模型生成内容所引发的一切后果（包括但不限于内容传播、侵权、违法或平台违规）。
+
+This project is an AI chatbot. All replies are **generated by third-party large language models**. The author makes no warranty and assumes no liability regarding the accuracy, legality, compliance, truthfulness, or appropriateness of any model-generated content. The user shall judge such content independently and bear all consequences arising from it (including but not limited to content distribution, infringement, illegality, or platform violations).
+
+## 5. 修改与衍生版本免责 · Disclaimer for Modified/Derivative Works
+
+使用者自行修改、编译、打包、部署本软件或其衍生作品后产生的一切后果（包括但不限于账号异常、封禁、数据丢失、违反第三方平台规则、法律责任），**与原作者无关，由使用者自行承担**。
+
+Any consequences arising from the user's own modification, compilation, packaging, or deployment of this software or its derivatives (including but not limited to account issues, bans, data loss, violations of third-party platform rules, or legal liability) are **not the responsibility of the original author** and are borne solely by the user.
+
+## 6. 无义务条款 · No Obligations
+
+作者**无义务**提供技术支持、缺陷修复、版本更新、文档完善或响应任何问题。
+
+The author has **no obligation** to provide technical support, defect fixes, version updates, documentation improvements, or to respond to any issues.
+
+## 7. 可分割性 · Severability
+
+本许可的任何条款在适用法律下被认定无效或不可执行时，其余条款仍保持完全效力。
+
+If any provision of this license is held to be invalid or unenforceable under applicable law, the remaining provisions shall remain in full force and effect.
+
+## 8. 完整性 · Entire Agreement
+
+本许可构成双方关于本软件的完整协议，**取代所有先前的口头或书面约定、陈述与承诺**；本许可的放弃须以书面形式作出，未行使任何权利不构成对该权利的放弃。
+
+This license constitutes the entire agreement between the parties regarding the software and **supersedes all prior oral or written agreements, representations, and promises**. Any waiver must be made in writing; failure to exercise any right shall not constitute a waiver of such right.
+
+## 9. 适用法律与管辖 · Governing Law and Jurisdiction
+
+本许可适用**中华人民共和国法律**（冲突法规则除外）。因本许可或本软件产生的争议，由作者所在地有管辖权的人民法院管辖。
+
+This license is governed by **the laws of the People's Republic of China** (excluding its conflict-of-law rules). Any dispute arising from this license or the software shall be subject to the jurisdiction of the competent people's court at the author's place of residence.
+
+## 10. 接受条款 · Acceptance
+
+下载、复制、修改或使用本软件，即表示您**已阅读并同意**本许可的全部条款，并同意**自行承担因使用本软件产生的全部责任**；因使用本软件所产生的一切责任均**与作者无关**。如不同意，请勿使用。
+
+By downloading, copying, modifying, or using this software, you **acknowledge that you have read and agreed to** all terms of this license, and agree to **bear all responsibility arising from the use of this software yourself**; all liability arising from the use of this software is **unrelated to the author**. If you do not agree, do not use it.
