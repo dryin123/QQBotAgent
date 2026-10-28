@@ -10,7 +10,7 @@ import unittest
 import aiohttp
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import start as app
+import main as app
 
 
 class TestTokenEstimate(unittest.TestCase):
