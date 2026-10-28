@@ -30,7 +30,7 @@ jobs:
         run: python -m py_compile main.py
 
       - name: Import
-        run: python -c "import start; print('import ok', start.APP_VERSION)"
+        run: python -c "import main; print('import ok', main.APP_VERSION)"
 
       - name: Unit tests
         run: python -m unittest discover -s tests -v
