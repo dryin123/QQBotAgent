@@ -3132,7 +3132,7 @@ async def _lifespan(app: FastAPI):
             logger.warning(f"关闭HTTP连接失败(可忽略): {e}")
         _http_shared = None
 
-APP_VERSION = "6.0.0"
+APP_VERSION = "6.1.0"
 app = FastAPI(title="QQBotAgent", version=APP_VERSION, lifespan=_lifespan)
 
 
@@ -3378,7 +3378,7 @@ HTML_TEMPLATE = """
             <h1>QQ 机器人 Agent</h1>
             <div class="brand-sub">本地服务 · 配置与运行管理</div>
         </div>
-        <span class="brand-ver">v6.0.0</span>
+        <span class="brand-ver">v6.1.0</span>
         <div class="theme-ctl">
             <button type="button" id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="切换白天 / 夜间模式">
                 <svg class="ic-day" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.2" fill="#ffd76a" stroke="#c9a24f" stroke-width="1.6"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2 16.9 7.1M7.1 16.9l-1.9 1.9" stroke="#c9a24f" stroke-width="1.7" stroke-linecap="round"/></svg>
@@ -3471,8 +3471,9 @@ HTML_TEMPLATE = """
         <div id="model-msg" class="hint" style="margin-top:6px;"></div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
             <span style="font-size:13px;color:#7f8c8d;">选择模型：</span>
-            <select id="model-pick" style="padding:5px;min-width:240px;"><option value=""></option></select>
-            <button type="button" class="btn btn-primary" onclick="applyModelPick()" style="padding:4px 12px;" title="立即启用所选模型（保存配置并让机器人用新模型重连）">应用</button>
+            <select id="model-pick" style="padding:5px;min-width:240px;" onchange="onModelPickChange()"><option value=""></option></select>
+            <button type="button" class="btn btn-primary" onclick="applyModelPick()" style="padding:4px 12px;" title="立即启用所选模型（保存配置；机器人运行中则热切换，无需重启）">应用</button>
+            <select id="model" style="display:none;"><option value=""></option></select>
         </div>
 
         <h3>对话设置</h3>
@@ -3494,12 +3495,6 @@ HTML_TEMPLATE = """
                 <label>思考深度</label>
                 <select id="thinking">
                     <option value="off">关闭</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>模型 (用于聊天)</label>
-                <select id="model">
-                    <option value=""></option>
                 </select>
             </div>
         </div>
@@ -3569,7 +3564,6 @@ HTML_TEMPLATE = """
         </div>
 
         <div style="margin-top: 20px;">
-            <button type="button" class="btn btn-success" onclick="startBot()">启动机器人</button>
             <button type="button" class="btn btn-primary" onclick="saveConfig()">保存配置</button>
             <button type="button" class="btn btn-warning" onclick="clearSessions()">清空对话记录</button>
         </div>
@@ -3822,12 +3816,7 @@ HTML_TEMPLATE = """
         const want = (data.thinking && data.thinking !== 'off') ? data.thinking : 'off';
         thSel.value = want;
         if (!thSel.value) thSel.value = 'off';  
-        document.getElementById('model').value = data.model || '';
-        const _pick = document.getElementById('model-pick');
-        if (_pick) {
-            if (!_pick.options.length || (_pick.options.length === 1 && !_pick.options[0].value)) _pick.innerHTML = '<option value=""></option>';
-            _pick.value = data.model || '';
-        }
+        ensureModelOption(data.model || '');
         
         const comp = data._compression || {};
         const ce = document.getElementById('compression_enabled');
@@ -3870,7 +3859,9 @@ HTML_TEMPLATE = """
             body: JSON.stringify(payload)
         });
         if (resp.ok) {
-            alert('配置已保存');
+            let data = {};
+            try { data = await resp.json(); } catch (e) {  }
+            alert(data.hot_reloaded ? '配置已保存，运行中的机器人已立即切换到新模型' : '配置已保存');
             loadConfig();
         } else {
             alert('保存失败');
@@ -3940,17 +3931,37 @@ HTML_TEMPLATE = """
             pick.innerHTML = '<option value=""></option>' + opts;
             sel.value = models.includes(current) ? current : models[0];
             pick.value = sel.value;
-            msg.textContent = `已获取 ${models.length} 个模型，请在下方「选择模型」中选定后点「应用」。`;
+            msg.textContent = `已获取 ${models.length} 个模型，在下方「选择模型」中选定后点「应用」即可生效。`;
         } else {
             msg.textContent = '获取模型列表失败';
         }
+    }
+
+    function ensureModelOption(m) {
+        const targets = [document.getElementById('model'), document.getElementById('model-pick')];
+        targets.forEach(function(sel) {
+            if (!sel) return;
+            if (m && !Array.prototype.some.call(sel.options, o => o.value === m)) {
+                const o = document.createElement('option');
+                o.value = m;
+                o.textContent = m;
+                sel.appendChild(o);
+            }
+            sel.value = m || '';
+        });
+    }
+
+    function onModelPickChange() {
+        const pick = document.getElementById('model-pick');
+        const sel = document.getElementById('model');
+        if (pick && sel) sel.value = pick.value;
     }
 
     async function applyModelPick() {
         const pick = document.getElementById('model-pick');
         const m = pick ? pick.value : '';
         if (!m) { alert('请先「获取模型列表」并在下拉框中选中一个模型。'); return; }
-        if (!confirm(`确定应用模型「${m}」吗？\\n将立即保存配置；若机器人运行中会自动用新模型重连。`)) return;
+        if (!confirm(`确定切换到模型「${m}」吗？\\n将立即保存并热切换，机器人运行中也不需要重启。`)) return;
         document.getElementById('model').value = m;
         await saveConfig();
         updateStatus();
@@ -4882,6 +4893,13 @@ async def update_config(request: Request, update: ConfigUpdate):
     for k, v in incoming.items():
         if k not in ("api_key", "app_secret", "base_url"):
             merged[k] = v
+
+    # 先比对，再覆盖：判断 provider 侧是否真的变了（模型单独处理）。
+    provider_changed = any(
+        str(merged.get(k) or "") != str(config.get(k) or "")
+        for k in ("provider_type", "base_url", "api_key")
+    )
+
     config = merged
     save_config(config)
     session_mgr.set_system_prompt(update.system_prompt)
@@ -4905,8 +4923,31 @@ async def update_config(request: Request, update: ConfigUpdate):
         provider_instance = create_provider(update.provider_type, config["api_key"], config["base_url"])
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # 热切换：直接改运行中 bot 的 provider/model，不重连 QQ、不丢会话。
+    hot_reloaded = False
+    session_mgr.model = config.get("model") or ""
+    if bot:
+        if provider_changed:
+            try:
+                provider_instance._register_secret(bot.app_id)
+                provider_instance._register_secret(bot.app_secret)
+            except Exception as e:
+                logger.warning(f"密钥登记失败(可忽略): {e}")
+            bot.provider = provider_instance
+            hot_reloaded = True
+        new_model = config.get("model") or ""
+        if new_model and getattr(bot, "model", "") != new_model:
+            bot.model = new_model
+            hot_reloaded = True
+        bot.temperature = config.get("temperature", 0.7)
+        if config.get("thinking") in ("off", "low", "medium", "high"):
+            bot.thinking = config["thinking"]
+        if hot_reloaded:
+            logger.info(f"已热切换到新模型: {new_model or getattr(bot, 'model', '')}")
+
     logger.info("配置已更新")
-    return {"status": "ok"}
+    return {"status": "ok", "hot_reloaded": hot_reloaded}
 
 @app.post("/api/models")
 async def get_models(request: Request, req: ProviderConfig):
@@ -5395,7 +5436,9 @@ async def apply_model_config(request: Request, req: ApplyModelConfigRequest):
                 logger.warning(f"操作失败(可忽略): {e}")
         bot = None
         bot_task = None
-        new_bot = QQBot(config["app_id"], config["app_secret"], provider_instance, session_mgr)
+        session_mgr.model = config.get("model", "")
+        new_bot = QQBot(config["app_id"], config["app_secret"], provider_instance, session_mgr,
+                        config=config, data_dir=DATA_DIR)
         new_bot.temperature = config.get("temperature", 0.7)
         new_bot.model = config.get("model", "")
         new_bot.thinking = config.get("thinking", "off")
